@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}{{ proposal.number }} {{ proposal.title }}{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+<form method="post">{% csrf_token %}
+<div class="grid grid-3">
+  <div class="card span-2"><div class="card-body">
+    {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="form-grid">
+      {% include "includes/field.html" with field=form.title extra_class="full" %}
+      <div class="field"><label for="{{ form.client.id_for_label }}">Client</label>
+        <select name="client" id="{{ form.client.id_for_label }}" hx-get="{% url 'contact_options' %}" hx-target="#{{ form.contact.id_for_label }}" hx-trigger="change" hx-include="this">
+          <option value="">— none —</option>{% for c in form.fields.client.queryset %}<option value="{{ c.pk }}" {% if form.client.value|stringformat:"s" == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select>{% for e in form.client.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>
+      {% include "includes/field.html" with field=form.contact %}
+      {% include "includes/field.html" with field=form.service_type %}
+      {% include "includes/field.html" with field=form.owner %}
+      {% include "includes/field.html" with field=form.status %}
+      {% include "includes/field.html" with field=form.due_date %}
+      {% include "includes/field.html" with field=form.probability %}
+      {% include "includes/field.html" with field=form.location %}
+      {% include "includes/field.html" with field=form.summary extra_class="full" %}
+      {% include "includes/field.html" with field=form.services extra_class="full" %}
+      {% include "includes/field.html" with field=form.notes extra_class="full" %}
+    </div>
+    <h4 class="mt">Tracking</h4>
+    <div class="form-grid">
+      {% include "includes/field.html" with field=form.submitted_at %}
+      {% include "includes/field.html" with field=form.decided_at %}
+      {% include "includes/field.html" with field=form.manual_value %}
+    </div>
+    <div class="form-actions"><button class="btn btn-primary">Save changes</button></div>
+  </div></div>
+  <div class="stack">
+    <div class="card"><div class="card-body">
+      <h3>At a glance</h3>
+      <div class="kv">
+        <span class="k">Fee</span><span><strong>${{ proposal.fee_total|floatformat:0|intcomma }}</strong>{% if proposal.manual_value is not None %} <small>(manual)</small>{% endif %}</span>
+        <span class="k">Weighted</span><span>${{ proposal.weighted_value|floatformat:0|intcomma }} at {{ proposal.probability }}%</span>
+        <span class="k">Hours</span><span>{{ proposal.total_hours|floatformat:0 }} h</span>
+        <span class="k">Sections</span><span>{{ proposal.sections.count }}</span>
+        <span class="k">Schedule</span><span>{{ proposal.tasks.count }} item{{ proposal.tasks.count|pluralize }}</span>
+        <span class="k">Template</span><span>{{ proposal.template|default:"—" }}</span>
+        <span class="k">Created</span><span>{{ proposal.created_at|date:"j M Y" }}</span>
+        <span class="k">Updated</span><span>{{ proposal.updated_at|naturaltime }}</span>
+      </div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <h3>Next steps</h3>
+      <ol style="padding-left:1.2rem;margin:0;font-size:.9rem;line-height:1.7">
+        <li><a href="{% url 'proposal_sections' proposal.pk %}">Write the content</a> from the template</li>
+        <li><a href="{% url 'proposal_fee' proposal.pk %}">Build the fee</a> by role and hours</li>
+        <li><a href="{% url 'proposal_schedule' proposal.pk %}">Lay out the schedule</a> (Gantt)</li>
+        <li><a href="{% url 'proposal_preview' proposal.pk %}">Preview and print</a> to PDF</li>
+      </ol>
+    </div></div>
+  </div>
+</div>
+</form>
+{% endblock %}

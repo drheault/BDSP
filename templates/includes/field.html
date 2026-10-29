@@ -1,0 +1,10 @@
+{% if field.field.widget.input_type == "checkbox" and not field.field.widget.allow_multiple_selected %}
+<div class="field check {{ extra_class }}">{{ field }}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}{% for e in field.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+{% else %}
+<div class="field {{ extra_class }}">
+  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="muted">*</span>{% endif %}</label>
+  {% if field.field.widget.allow_multiple_selected and field.field.widget.input_type == "checkbox" %}<ul class="checks">{% for cb in field %}<li>{{ cb }}</li>{% endfor %}</ul>{% else %}{{ field }}{% endif %}
+  {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+  {% for e in field.errors %}<div class="err">{{ e }}</div>{% endfor %}
+</div>
+{% endif %}

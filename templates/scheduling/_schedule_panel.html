@@ -1,0 +1,39 @@
+{% load bdsp %}
+<div class="card">
+  <div class="card-head"><h3>Gantt chart</h3>
+    <div class="row-flex">
+      <div class="legend">{% for k, v in phases %}<span><span class="dot" style="background:{{ phase_colors|get_item:k }}"></span>{{ v }}</span>{% endfor %}</div>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if gantt %}{% include "scheduling/_gantt.html" %}
+    <div class="row-flex mt-sm"><span class="muted">Shift the whole schedule:</span>
+      {% for d in "-28,-7,7,28"|split:"," %}<button class="btn btn-xs" hx-post="{% url 'schedule_shift_all' proposal.pk %}" hx-vals='{"days": {{ d }}}' hx-target="#schedule-panel">{% if d|first != "-" %}+{% endif %}{{ d }} d</button>{% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><strong>No schedule yet</strong>Add tasks below, or generate a standard {{ proposal.get_service_type_display|lower }} schedule.</div>
+    <form method="post" action="{% url 'schedule_defaults' proposal.pk %}" class="inline-form" style="justify-content:center">{% csrf_token %}
+      <div class="field narrow" style="flex-basis:170px"><label>Start date</label><input type="date" name="start" value="{% now 'Y-m-d' %}"></div>
+      <button class="btn btn-accent">Generate default schedule</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h3>Tasks &amp; milestones</h3>
+    {% if tasks %}<form method="post" action="{% url 'schedule_defaults' proposal.pk %}" class="inline-form" data-confirm="Replace all tasks with the default schedule?">{% csrf_token %}<input type="hidden" name="replace" value="1"><input type="date" name="start" value="{% now 'Y-m-d' %}" style="width:auto"><button class="btn btn-sm">Reset to default schedule</button></form>{% endif %}
+  </div>
+  <table class="tbl"><thead><tr><th style="width:28px"></th><th>Task</th><th>Phase</th><th>Start</th><th>End</th><th class="num">Days</th><th>Done</th><th>After</th><th></th></tr></thead>
+  <tbody>{% for t in tasks %}{% include "scheduling/_task_row.html" %}{% empty %}<tr><td colspan="9" class="muted">No tasks yet.</td></tr>{% endfor %}</tbody></table>
+  <div class="card-body" style="border-top:1px solid var(--line)">
+    <form hx-post="{% url 'task_add' proposal.pk %}" hx-target="#schedule-panel" class="inline-form">
+      <div class="field" style="flex:2"><label>Task name</label>{{ task_form.name }}{% for e in task_form.name.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+      <div class="field"><label>Phase</label>{{ task_form.phase }}</div>
+      <div class="field narrow" style="flex-basis:150px"><label>Start</label>{{ task_form.start }}{% for e in task_form.start.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+      <div class="field narrow" style="flex-basis:150px"><label>End</label>{{ task_form.end }}{% for e in task_form.end.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+      <div class="field narrow"><label>After</label>{{ task_form.predecessor }}</div>
+      <div class="field check narrow">{{ task_form.is_milestone }}<label>Milestone</label></div>
+      <button class="btn btn-primary btn-sm">Add</button>
+    </form>
+  </div>
+</div>

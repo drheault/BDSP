@@ -1,0 +1,17 @@
+<tr id="task-{{ t.pk }}">
+  <td><span class="dot" style="background:{{ t.color }}"></span></td>
+  <td><strong>{{ t.name }}</strong>{% if t.is_milestone %} <span class="badge">milestone</span>{% endif %}</td>
+  <td><small>{{ t.get_phase_display }}</small></td>
+  <td>{{ t.start|date:"j M Y" }}</td><td>{% if t.is_milestone %}—{% else %}{{ t.end|date:"j M Y" }}{% endif %}</td>
+  <td class="num">{% if t.is_milestone %}—{% else %}{{ t.duration_days }}{% endif %}</td>
+  <td style="min-width:70px"><div class="progress" title="{{ t.percent_complete }}%"><i style="width:{{ t.percent_complete }}%"></i></div></td>
+  <td><small>{{ t.predecessor.name|default:"—"|truncatechars:22 }}</small></td>
+  <td class="row-actions">
+    <button class="btn btn-xs btn-ghost" title="Earlier 1 week" hx-post="{% url 'task_shift' t.pk %}" hx-vals='{"days": -7}' hx-target="#schedule-panel">−7d</button>
+    <button class="btn btn-xs btn-ghost" title="Later 1 week (with successors)" hx-post="{% url 'task_shift' t.pk %}" hx-vals='{"days": 7, "cascade": 1}' hx-target="#schedule-panel">+7d</button>
+    <button class="btn btn-xs btn-ghost" hx-post="{% url 'task_move' t.pk 'up' %}" hx-target="#schedule-panel">↑</button>
+    <button class="btn btn-xs btn-ghost" hx-post="{% url 'task_move' t.pk 'down' %}" hx-target="#schedule-panel">↓</button>
+    <button class="btn btn-xs" hx-get="{% url 'task_edit' t.pk %}" hx-target="#task-{{ t.pk }}" hx-swap="outerHTML">Edit</button>
+    <button class="btn btn-xs btn-danger" hx-post="{% url 'task_delete' t.pk %}" hx-confirm="Delete “{{ t.name }}”?" hx-target="#schedule-panel">×</button>
+  </td>
+</tr>

@@ -1,0 +1,1 @@
+<option value="">— none —</option>{% for c in contacts %}<option value="{{ c.pk }}">{{ c.name }}{% if c.title %} · {{ c.title }}{% endif %}</option>{% endfor %}

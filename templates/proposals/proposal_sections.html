@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ proposal.number }} content{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+<div class="grid grid-3">
+  <div class="span-2">
+    <div id="section-list">{% include "proposals/_section_list.html" %}</div>
+    <form class="row-flex mt" hx-post="{% url 'section_add' proposal.pk %}" hx-target="#sections" hx-swap="beforeend">
+      <input type="text" name="title" placeholder="New section title…" style="max-width:320px">
+      <button class="btn btn-primary">+ Add section</button>
+    </form>
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-body">
+      <h3>Placeholders</h3>
+      <p class="muted">Click to insert into the section you are editing. They are replaced when the proposal is previewed or printed.</p>
+      <div class="placeholders">{% for k, v in placeholders.items %}<code title="{{ v }}">{% templatetag openvariable %}{{ k }}{% templatetag closevariable %}</code>{% endfor %}</div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <h3>Apply a template</h3>
+      <p class="muted">Append or replace the current sections with a template's sections.</p>
+      <form method="post" action="{% url 'apply_template' proposal.pk %}" class="stack" data-confirm="Apply the template? If 'replace' is ticked, existing sections are deleted.">{% csrf_token %}
+        <select name="template">{% for t in templates %}<option value="{{ t.pk }}" {% if t.pk == proposal.template_id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>
+        <label class="row-flex" style="font-size:.86rem"><input type="checkbox" name="replace" value="1"> Replace existing sections</label>
+        <button class="btn">Apply template</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

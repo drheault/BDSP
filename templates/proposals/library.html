@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Services & rates{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Services &amp; rates</h1><div class="sub">The service catalogue used as a scope checklist, and billing roles with default hourly rates for fee estimates.</div></div></div>
+<div class="grid grid-2">
+  <div class="card"><div class="card-head"><h3>Service catalogue</h3></div><div id="services">{% include "proposals/_service_list.html" %}</div></div>
+  <div class="card"><div class="card-head"><h3>Staff roles &amp; rates</h3></div><div id="roles">{% include "proposals/_role_list.html" %}</div></div>
+</div>
+{% endblock %}

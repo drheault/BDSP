@@ -1,0 +1,7 @@
+<div class="section-card editing" id="section-{{ section.pk }}">
+  <form hx-post="{% url 'tsection_edit' section.pk %}" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML">
+    <div class="sc-head"><span class="n">{{ section.order|add:1 }}</span><div style="flex:1">{{ form.title }}</div><button class="btn btn-sm btn-primary">Save</button>
+      <button type="button" class="btn btn-sm btn-ghost" hx-get="{% url 'tsection_card' section.pk %}" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML">Cancel</button></div>
+    <div class="card-body">{{ form.body }}</div>
+  </form>
+</div>

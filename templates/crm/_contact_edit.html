@@ -1,0 +1,8 @@
+<tr id="contact-{{ contact.pk }}">
+  <td colspan="5"><form hx-post="{% url 'contact_edit' contact.pk %}" hx-target="#contact-{{ contact.pk }}" hx-swap="outerHTML" class="inline-form">
+    <div class="field"><label>Name</label>{{ form.name }}</div><div class="field"><label>Title</label>{{ form.title }}</div>
+    <div class="field"><label>Email</label>{{ form.email }}</div><div class="field narrow"><label>Phone</label>{{ form.phone }}</div>
+    <div class="field check narrow">{{ form.is_primary }}<label>Primary</label></div>
+    <button class="btn btn-primary btn-sm">Save</button><button type="button" class="btn btn-ghost btn-sm" hx-get="{% url 'contact_row' contact.pk %}" hx-target="#contact-{{ contact.pk }}" hx-swap="outerHTML">Cancel</button>
+  </form>{% if form.errors %}<div class="errorlist">{{ form.errors }}</div>{% endif %}</td>
+</tr>

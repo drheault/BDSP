@@ -1,0 +1,57 @@
+{% extends "base.html" %}{% load humanize static %}
+{% block title %}{{ proposal.number }} preview{% endblock %}
+{% block head %}<style>:root{--doc-primary:{{ company.primary_color }};--doc-accent:{{ company.accent_color }}}</style>{% endblock %}
+{% block content %}
+<div class="no-print">{% include "proposals/_proposal_header.html" %}</div>
+<div class="print-bar"><span class="muted">This is how the proposal prints. Use your browser's “Save as PDF”.</span><button class="btn btn-primary" onclick="window.print()">Print / save PDF</button></div>
+<article class="doc">
+  <header class="cover">
+    <div>{% if company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }}">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="">{% endif %}</div>
+    <div class="co"><b>{{ company.name }}</b>{% if company.tagline %}
+{{ company.tagline }}{% endif %}{% if company.address %}
+{{ company.address }}{% endif %}{% if company.phone %}
+{{ company.phone }}{% endif %}{% if company.email %}
+{{ company.email }}{% endif %}{% if company.website %}
+{{ company.website }}{% endif %}</div>
+  </header>
+  <div class="title-block">
+    <div class="kicker">Proposal {{ proposal.number }} · {{ proposal.get_service_type_display }}</div>
+    <h1>{{ proposal.title }}</h1>
+    {% if proposal.summary %}<p style="font-size:1.05rem;color:#444">{{ proposal.rendered_summary }}</p>{% endif %}
+    <div class="meta">
+      <div><div class="k">Prepared for</div>{{ proposal.client|default:"—" }}{% if proposal.contact %}<br>{{ proposal.contact.name }}{% if proposal.contact.title %}, {{ proposal.contact.title }}{% endif %}{% endif %}</div>
+      <div><div class="k">Date</div>{% now "j F Y" %}</div>
+      {% if proposal.location %}<div><div class="k">Location</div>{{ proposal.location }}</div>{% endif %}
+      {% if proposal.owner %}<div><div class="k">Prepared by</div>{{ proposal.owner.get_full_name|default:proposal.owner.username }}</div>{% endif %}
+    </div>
+  </div>
+
+  {% for s in proposal.sections.all %}
+  <section><h2><span class="n">{{ forloop.counter }}.</span>{{ s.title }}</h2><div class="body">{{ s.rendered_body }}</div></section>
+  {% endfor %}
+
+  {% if proposal.services.exists %}
+  <section><h2><span class="n">{{ proposal.sections.count|add:1 }}.</span>Scope of services</h2>
+    <ul class="svc">{% for sv in proposal.services.all %}<li>{{ sv.name }}</li>{% endfor %}</ul></section>
+  {% endif %}
+
+  {% if gantt %}
+  <section><h2><span class="n">{{ proposal.sections.count|add:2 }}.</span>Schedule</h2>
+    {% include "scheduling/_gantt.html" with gantt=gantt compact=True %}</section>
+  {% endif %}
+
+  {% if proposal.staffing.exists or proposal.manual_value is not None %}
+  <section><h2><span class="n">{{ proposal.sections.count|add:3 }}.</span>Fee</h2>
+    {% if proposal.staffing.exists %}
+    <table class="tbl"><thead><tr><th>Role</th><th>Task</th><th class="num">Hours</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead><tbody>
+      {% for l in proposal.staffing.all %}<tr><td>{{ l.role }}</td><td>{{ l.task }}</td><td class="num">{{ l.hours|floatformat:0 }}</td><td class="num">${{ l.rate|floatformat:0 }}</td><td class="num">${{ l.amount|floatformat:0|intcomma }}</td></tr>{% endfor %}
+      <tr><td colspan="4"><strong>Labour</strong></td><td class="num">${{ proposal.labour_total|floatformat:0|intcomma }}</td></tr>
+      {% if proposal.expenses %}<tr><td colspan="4">Expenses{% if proposal.markup_percent %} (incl. {{ proposal.markup_percent|floatformat:0 }}% markup){% endif %}</td><td class="num">${{ proposal.expenses_total|floatformat:0|intcomma }}</td></tr>{% endif %}
+    </tbody><tfoot><tr><td colspan="4">Total fee</td><td class="num">${{ proposal.fee_total|floatformat:0|intcomma }}</td></tr></tfoot></table>
+    {% else %}<p>Total fee: <strong>${{ proposal.fee_total|floatformat:0|intcomma }}</strong></p>{% endif %}
+  </section>
+  {% endif %}
+
+  <footer class="footer"><span>{{ company.proposal_footer }}</span><span>{{ proposal.number }}</span></footer>
+</article>
+{% endblock %}

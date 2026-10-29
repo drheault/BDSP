@@ -1,0 +1,8 @@
+<div class="imgcard" id="img-{{ img.pk }}">
+  <img src="{{ img.image.url }}" alt="{{ img.caption }}">
+  <div class="c">
+    <form style="flex:1" hx-post="{% url 'image_caption' img.pk %}" hx-trigger="change" hx-target="#img-{{ img.pk }}" hx-swap="outerHTML"><input type="text" name="caption" value="{{ img.caption }}" placeholder="Caption"></form>
+    <button class="btn btn-xs" title="Make cover" hx-post="{% url 'image_cover' img.pk %}" hx-target="#gallery">★</button>
+    <button class="btn btn-xs btn-danger" hx-post="{% url 'image_delete' img.pk %}" hx-confirm="Delete image?" hx-target="#img-{{ img.pk }}" hx-swap="outerHTML">×</button>
+  </div>
+</div>

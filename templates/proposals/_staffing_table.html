@@ -1,0 +1,12 @@
+{% load humanize %}
+<table class="tbl"><thead><tr><th>Role</th><th>Task / phase</th><th class="num">Hours</th><th class="num">Rate</th><th class="num">Amount</th><th></th></tr></thead>
+<tbody>{% for line in proposal.staffing.all %}{% include "proposals/_staffing_row.html" %}{% empty %}<tr><td colspan="6" class="muted">No labour lines yet — add roles and hours below.</td></tr>{% endfor %}</tbody>
+<tfoot><tr><td colspan="2">Labour total</td><td class="num">{{ proposal.total_hours|floatformat:1 }}</td><td></td><td class="num">${{ proposal.labour_total|floatformat:0|intcomma }}</td><td></td></tr></tfoot></table>
+<div class="card-body" style="border-top:1px solid var(--line)">
+<form hx-post="{% url 'staffing_add' proposal.pk %}" hx-target="#staffing" hx-swap="innerHTML" class="inline-form" hx-on::after-request="if(event.detail.successful){htmx.ajax('GET','{% url 'proposal_fee' proposal.pk %}',{target:'#fee-summary',select:'#fee-summary > *',swap:'innerHTML'})}">
+  <div class="field"><label>Role</label>{{ staffing_form.role }}{% for e in staffing_form.role.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+  <div class="field"><label>Task / phase</label>{{ staffing_form.task }}</div>
+  <div class="field narrow"><label>Hours</label>{{ staffing_form.hours }}</div>
+  <div class="field narrow"><label>Rate (opt.)</label>{{ staffing_form.rate }}</div>
+  <button class="btn btn-primary btn-sm">Add line</button>
+</form></div>

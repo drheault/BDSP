@@ -1,0 +1,79 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}BDSP{% endblock %} · {{ company.name|default:"BDSP" }}</title>
+  <link rel="icon" href="{% if company and company.logo %}{{ company.logo.url }}{% else %}{% static 'img/logo-default.svg' %}{% endif %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% if company %}<style>:root{--navy:{{ company.primary_color }};--accent:{{ company.accent_color }};}</style>{% endif %}
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <script>if(!window.htmx){document.write('<script src="{% static 'js/htmx.min.js' %}"><\/script>')}</script>
+  {% block head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-boost="false">
+{% block body %}
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="{% url 'dashboard' %}">
+      {% if company and company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }} logo">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="logo">{% endif %}
+      <span><span class="name">{{ company.name|default:"BDSP" }}</span><br><span class="tag">{{ company.tagline|default:"Business development" }}</span></span>
+    </a>
+    {% with url_name=request.resolver_match.url_name %}
+    <nav class="nav">
+      <a href="{% url 'dashboard' %}" class="{% if url_name == 'dashboard' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</a>
+      <div class="label">Business development</div>
+      <a href="{% url 'proposal_list' %}" class="{% if url_name|slice:':8' == 'proposal' or url_name|slice:':7' == 'section' or url_name|slice:':8' == 'staffing' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>Proposals</a>
+      <a href="{% url 'programme' %}" class="{% if url_name == 'programme' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h8M3 12h12M3 18h6"/><rect x="13" y="4" width="8" height="4" rx="1"/><rect x="11" y="16" width="10" height="4" rx="1"/></svg>Programme</a>
+      <a href="{% url 'client_list' %}" class="{% if url_name|slice:':6' == 'client' or url_name|slice:':7' == 'contact' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5A5 5 0 0 1 22 19"/></svg>Clients &amp; contacts</a>
+      <a href="{% url 'project_list' %}" class="{% if url_name|slice:':7' == 'project' or url_name|slice:':5' == 'image' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg>Project sheets</a>
+      <a href="{% url 'metrics' %}" class="{% if url_name == 'metrics' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Metrics</a>
+      <div class="label">Setup</div>
+      <a href="{% url 'template_list' %}" class="{% if url_name|slice:':8' == 'template' or url_name|slice:':8' == 'tsection' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Proposal templates</a>
+      <a href="{% url 'library' %}" class="{% if url_name == 'library' or url_name|slice:':7' == 'service' or url_name|slice:':4' == 'role' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M4 19a2 2 0 0 0 2 2h14M9 7h6"/></svg>Services &amp; rates</a>
+      <a href="{% url 'company_settings' %}" class="{% if url_name == 'company_settings' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Company &amp; logo</a>
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7z"/></svg>Admin</a>{% endif %}
+    </nav>
+    {% endwith %}
+    <div class="user">
+      <span>{{ user.get_full_name|default:user.username }}</span>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+    </div>
+  </aside>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+{% if messages %}
+<div class="messages">{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}</div>
+{% endif %}
+<script>
+  // Confirm destructive htmx actions and plain forms with data-confirm.
+  document.addEventListener("submit", function (e) {
+    var msg = e.target.getAttribute("data-confirm");
+    if (msg && !confirm(msg)) e.preventDefault();
+  });
+  // Insert placeholder tokens into the focused textarea.
+  document.addEventListener("click", function (e) {
+    var ph = e.target.closest(".placeholders code");
+    if (!ph) return;
+    var ta = document.querySelector("textarea:focus") || document.querySelector(".section-card.editing textarea");
+    if (!ta) { navigator.clipboard && navigator.clipboard.writeText(ph.textContent); return; }
+    var s = ta.selectionStart, v = ta.value;
+    ta.value = v.slice(0, s) + ph.textContent + v.slice(ta.selectionEnd);
+    ta.focus(); ta.selectionStart = ta.selectionEnd = s + ph.textContent.length;
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

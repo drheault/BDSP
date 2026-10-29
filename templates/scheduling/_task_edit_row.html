@@ -1,0 +1,13 @@
+<tr id="task-{{ task.pk }}"><td colspan="9">
+  <form hx-post="{% url 'task_edit' task.pk %}" hx-target="#schedule-panel" class="inline-form">
+    <div class="field" style="flex:2"><label>Task</label>{{ form.name }}</div>
+    <div class="field"><label>Phase</label>{{ form.phase }}</div>
+    <div class="field narrow" style="flex-basis:150px"><label>Start</label>{{ form.start }}</div>
+    <div class="field narrow" style="flex-basis:150px"><label>End</label>{{ form.end }}</div>
+    <div class="field narrow" style="flex-basis:80px"><label>% done</label>{{ form.percent_complete }}</div>
+    <div class="field narrow"><label>After</label>{{ form.predecessor }}</div>
+    <div class="field check narrow">{{ form.is_milestone }}<label>Milestone</label></div>
+    <button class="btn btn-primary btn-sm">Save</button>
+    <button type="button" class="btn btn-ghost btn-sm" hx-get="{% url 'task_row' task.pk %}" hx-target="#task-{{ task.pk }}" hx-swap="outerHTML">Cancel</button>
+  </form>{% if form.errors %}<div class="errorlist">{{ form.errors }}</div>{% endif %}
+</td></tr>

@@ -1,0 +1,11 @@
+{% load humanize %}<tr id="prow-{{ p.pk }}">
+  <td class="mono">{{ p.number }}</td>
+  <td><a class="strong" href="{% url 'proposal_detail' p.pk %}">{{ p.title }}</a><br><small>{{ p.client|default:"No client" }}{% if p.location %} · {{ p.location }}{% endif %}</small></td>
+  <td><span class="badge badge-{{ p.service_type }}">{{ p.get_service_type_display }}</span></td>
+  <td><form hx-post="{% url 'proposal_status' p.pk %}" hx-trigger="change" hx-target="#prow-{{ p.pk }}" hx-swap="outerHTML"><input type="hidden" name="render" value="row">
+    <select name="status" class="badge badge-{{ p.status }}" style="border:0;width:auto;padding:.15rem .4rem;font-size:.74rem;cursor:pointer">{% for k, v in p.Status.choices %}<option value="{{ k }}" {% if k == p.status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></form></td>
+  <td>{% if p.owner %}{{ p.owner.get_full_name|default:p.owner.username }}{% else %}—{% endif %}</td>
+  <td class="num">${{ p.fee_total|floatformat:0|intcomma }}</td>
+  <td class="num">{{ p.probability }}%</td>
+  <td>{% if p.due_date %}<span class="{% if p.is_open and p.days_to_due < 0 %}due-bad{% elif p.is_open and p.days_to_due <= 7 %}due-warn{% endif %}">{{ p.due_date|date:"j M Y" }}</span>{% else %}—{% endif %}</td>
+</tr>

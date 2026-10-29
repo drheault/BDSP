@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}{{ proposal.number }} fee{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+<div class="grid grid-3">
+  <div class="card span-2"><div class="card-head"><h3>Labour build-up</h3><span class="muted">Rates default from <a href="{% url 'library' %}">Services &amp; rates</a></span></div>
+    <div id="staffing">{% include "proposals/_staffing_table.html" %}</div>
+  </div>
+  <div class="stack">
+    <div id="fee-summary">{% include "proposals/_fee_summary.html" %}</div>
+    <div class="card"><div class="card-body">
+      <h3>Expenses &amp; overrides</h3>
+      <form hx-post="{% url 'proposal_fee' proposal.pk %}" hx-target="#fee-summary" hx-swap="innerHTML" class="stack">
+        {% include "includes/field.html" with field=fee_form.expenses %}
+        {% include "includes/field.html" with field=fee_form.markup_percent %}
+        {% include "includes/field.html" with field=fee_form.manual_value %}
+        <button class="btn btn-primary">Update</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

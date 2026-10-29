@@ -1,0 +1,7 @@
+<table class="tbl"><thead><tr><th>Service</th><th>Category</th><th></th></tr></thead><tbody>
+{% for service in services %}{% include "proposals/_service_row.html" %}{% empty %}<tr><td colspan="3" class="muted">No services yet.</td></tr>{% endfor %}
+</tbody></table>
+<div class="card-body" style="border-top:1px solid var(--line)"><form hx-post="{% url 'service_add' %}" hx-target="#services" class="inline-form">
+  <div class="field"><label>Name</label>{{ service_form.name }}{% for e in service_form.name.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+  <div class="field"><label>Category</label>{{ service_form.category }}</div>
+  <button class="btn btn-primary btn-sm">Add service</button></form></div>

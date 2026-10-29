@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ template.name }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'template_list' %}">Templates</a> /</div><h1>{{ template.name }}</h1><div class="sub">Edit the outline and default wording. Changes apply to proposals created from now on.</div></div>
+<div class="actions"><form method="post" action="{% url 'template_duplicate' template.pk %}">{% csrf_token %}<button class="btn">Duplicate</button></form>
+<form method="post" action="{% url 'template_delete' template.pk %}" data-confirm="Delete this template? Existing proposals keep their sections.">{% csrf_token %}<button class="btn btn-danger">Delete</button></form></div></div>
+<div class="grid grid-3">
+  <div class="span-2">
+    <div id="section-list">{% include "proposals/_tsection_list.html" %}</div>
+    <form class="row-flex mt" hx-post="{% url 'tsection_add' template.pk %}" hx-target="#sections" hx-swap="beforeend">
+      <input type="text" name="title" placeholder="New section title…" style="max-width:320px"><button class="btn btn-primary">+ Add section</button></form>
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-body"><h3>Template settings</h3>
+      <form method="post" class="stack">{% csrf_token %}{% include "includes/field.html" with field=form.name %}{% include "includes/field.html" with field=form.service_type %}{% include "includes/field.html" with field=form.description %}{% include "includes/field.html" with field=form.is_default %}
+      <button class="btn btn-primary">Save settings</button></form></div></div>
+    <div class="card"><div class="card-body"><h3>Placeholders</h3><p class="muted">Use these in section text; they are filled in per proposal.</p>
+      <div class="placeholders"><code>{% templatetag openvariable %}client_name{% templatetag closevariable %}</code><code>{% templatetag openvariable %}contact_name{% templatetag closevariable %}</code><code>{% templatetag openvariable %}project_name{% templatetag closevariable %}</code><code>{% templatetag openvariable %}project_location{% templatetag closevariable %}</code><code>{% templatetag openvariable %}proposal_number{% templatetag closevariable %}</code><code>{% templatetag openvariable %}company_name{% templatetag closevariable %}</code><code>{% templatetag openvariable %}owner_name{% templatetag closevariable %}</code><code>{% templatetag openvariable %}date{% templatetag closevariable %}</code><code>{% templatetag openvariable %}fee_total{% templatetag closevariable %}</code></div></div></div>
+  </div>
+</div>
+{% endblock %}

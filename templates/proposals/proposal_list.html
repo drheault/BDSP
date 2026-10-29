@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Proposals{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Proposals</h1><div class="sub">Every pursuit from first lead to decision.</div></div>
+<div class="actions"><a class="btn" href="{% url 'proposal_board' %}">Board view</a><a class="btn btn-primary" href="{% url 'proposal_create' %}">+ New proposal</a></div></div>
+<form class="filters" hx-get="{% url 'proposal_list' %}" hx-trigger="input changed delay:300ms from:input, change from:select" hx-target="#proposal-rows" hx-include="this">
+  <input type="search" name="q" placeholder="Search title, number, client…" value="{{ filters.q }}">
+  <select name="status"><option value="">All statuses</option><option value="open" {% if filters.status == "open" %}selected{% endif %}>Open only</option>{% for k, v in statuses %}<option value="{{ k }}" {% if filters.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  <select name="service"><option value="">All service types</option>{% for k, v in service_types %}<option value="{{ k }}" {% if filters.service == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  <select name="owner"><option value="">Any lead</option>{% for u in owners %}<option value="{{ u.pk }}" {% if filters.owner == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select>
+</form>
+<div class="card table-wrap"><table class="tbl"><thead><tr><th>No.</th><th>Title</th><th>Type</th><th>Status</th><th>Lead</th><th class="num">Fee</th><th class="num">Prob.</th><th>Due</th></tr></thead>
+<tbody id="proposal-rows">{% include "proposals/_proposal_rows.html" %}</tbody></table></div>
+{% endblock %}

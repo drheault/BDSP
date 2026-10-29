@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Programme{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Programme overview</h1><div class="sub">One bar per pursuit, spanning its scheduled tasks. Use it to spot staffing crunches across proposals.</div></div>
+<div class="actions"><a class="btn {% if include_won %}btn-primary{% endif %}" href="?won={% if include_won %}0{% else %}1{% endif %}">{% if include_won %}Hide{% else %}Include{% endif %} won work</a></div></div>
+<div class="card"><div class="card-body">
+  {% if gantt %}{% include "scheduling/_gantt.html" %}
+  <div class="legend mt-sm"><span><span class="dot" style="background:#0f3d5e"></span>Design</span><span><span class="dot" style="background:#e07a1f"></span>Construction support / other</span></div>
+  {% else %}<div class="empty"><strong>Nothing scheduled</strong>Add tasks to open proposals and they will appear here.</div>{% endif %}
+</div></div>
+<div class="grid grid-2 mt">
+  <div class="card"><div class="card-head"><h3>Scheduled pursuits</h3></div>
+    <table class="tbl"><thead><tr><th>Proposal</th><th>From</th><th>To</th><th>Progress</th></tr></thead><tbody>
+    {% for i in items %}<tr><td><a class="strong" href="{% url 'proposal_schedule' i.proposal.pk %}">{{ i.proposal.number }}</a> {{ i.proposal.title|truncatechars:40 }}<br><small>{{ i.proposal.client|default:"" }} · {% include "proposals/_status_badge.html" with proposal=i.proposal %}</small></td><td>{{ i.start|date:"j M Y" }}</td><td>{{ i.end|date:"j M Y" }}</td><td style="min-width:80px"><div class="progress"><i style="width:{{ i.percent_complete }}%"></i></div></td></tr>
+    {% empty %}<tr><td colspan="4" class="muted">No scheduled pursuits.</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><div class="card-head"><h3>Milestones in the next 90 days</h3></div>
+    <table class="tbl"><tbody>{% for t in milestones %}<tr><td><span class="dot" style="background:{{ t.color }}"></span>{{ t.name }}<br><small><a href="{% url 'proposal_schedule' t.proposal.pk %}">{{ t.proposal.number }}</a> {{ t.proposal.title|truncatechars:36 }}</small></td><td class="right">{{ t.start|date:"j M Y" }}</td></tr>{% empty %}<tr><td class="muted">No upcoming milestones.</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+<table class="tbl"><thead><tr><th>Role</th><th class="num">Rate / h</th><th></th></tr></thead><tbody>
+{% for role in roles %}{% include "proposals/_role_row.html" %}{% empty %}<tr><td colspan="3" class="muted">No roles yet.</td></tr>{% endfor %}
+</tbody></table>
+<div class="card-body" style="border-top:1px solid var(--line)"><form hx-post="{% url 'role_add' %}" hx-target="#roles" class="inline-form">
+  <div class="field"><label>Title</label>{{ role_form.title }}{% for e in role_form.title.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+  <div class="field narrow"><label>Rate / h</label>{{ role_form.default_rate }}</div>
+  <button class="btn btn-primary btn-sm">Add role</button></form></div>

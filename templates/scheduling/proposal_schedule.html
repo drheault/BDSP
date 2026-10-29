@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ proposal.number }} schedule{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+<div id="schedule-panel">{% include "scheduling/_schedule_panel.html" %}</div>
+{% endblock %}

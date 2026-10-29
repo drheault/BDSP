@@ -1,0 +1,3 @@
+<div id="sections">
+{% for section in proposal.sections.all %}{% include "proposals/_section_card.html" %}{% empty %}<div class="card"><div class="empty"><strong>No sections yet</strong>Add a section or apply a template from the right.</div></div>{% endfor %}
+</div>

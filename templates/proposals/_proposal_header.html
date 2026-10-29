@@ -1,0 +1,20 @@
+{% load humanize %}
+<div class="page-head">
+  <div><div class="crumbs"><a href="{% url 'proposal_list' %}">Proposals</a> / <span class="mono">{{ proposal.number }}</span></div>
+    <h1>{{ proposal.title }}</h1>
+    <div class="sub">{% if proposal.client %}<a href="{% url 'client_detail' proposal.client.pk %}">{{ proposal.client }}</a>{% else %}No client{% endif %}{% if proposal.contact %} · {{ proposal.contact.name }}{% endif %} · <span class="badge badge-{{ proposal.service_type }}">{{ proposal.get_service_type_display }}</span>{% if proposal.due_date %} · due {{ proposal.due_date|date:"j M Y" }}{% if proposal.is_open %} (<span class="{% if proposal.days_to_due < 0 %}due-bad{% elif proposal.days_to_due <= 7 %}due-warn{% endif %}">{{ proposal.days_to_due }} d</span>){% endif %}{% endif %}</div>
+  </div>
+  <div class="actions">
+    {% include "proposals/_status_control.html" %}
+    <a class="btn" href="{% url 'proposal_preview' proposal.pk %}">Preview</a>
+    <form method="post" action="{% url 'proposal_duplicate' proposal.pk %}">{% csrf_token %}<button class="btn">Duplicate</button></form>
+    <form method="post" action="{% url 'proposal_delete' proposal.pk %}" data-confirm="Delete proposal {{ proposal.number }}? This cannot be undone.">{% csrf_token %}<button class="btn btn-danger">Delete</button></form>
+  </div>
+</div>
+<div class="tabs">
+  <a href="{% url 'proposal_detail' proposal.pk %}" class="{% if tab == 'overview' %}active{% endif %}">Overview</a>
+  <a href="{% url 'proposal_sections' proposal.pk %}" class="{% if tab == 'content' %}active{% endif %}">Content <span class="count">{{ proposal.sections.count }}</span></a>
+  <a href="{% url 'proposal_fee' proposal.pk %}" class="{% if tab == 'fee' %}active{% endif %}">Fee estimate <span class="count">${{ proposal.fee_total|floatformat:0|intcomma }}</span></a>
+  <a href="{% url 'proposal_schedule' proposal.pk %}" class="{% if tab == 'schedule' %}active{% endif %}">Schedule <span class="count">{{ proposal.tasks.count }}</span></a>
+  <a href="{% url 'proposal_preview' proposal.pk %}" class="{% if tab == 'preview' %}active{% endif %}">Preview &amp; print</a>
+</div>

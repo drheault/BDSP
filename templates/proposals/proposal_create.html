@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}New proposal{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'proposal_list' %}">Proposals</a> /</div><h1>New proposal</h1><div class="sub">Pick a template to start with pre-written sections; you can edit everything afterwards.</div></div></div>
+<div class="card" style="max-width:860px"><div class="card-body"><form method="post">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-grid">
+    {% include "includes/field.html" with field=form.title extra_class="full" %}
+    <div class="field"><label for="{{ form.client.id_for_label }}">Client</label>
+      <select name="client" id="{{ form.client.id_for_label }}" hx-get="{% url 'contact_options' %}" hx-target="#{{ form.contact.id_for_label }}" hx-trigger="change" hx-include="this">
+        <option value="">— none yet —</option>{% for c in form.fields.client.queryset %}<option value="{{ c.pk }}" {% if form.client.value|stringformat:"s" == c.pk|stringformat:"s" or request.GET.client == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select><div class="help">Not listed? <a href="{% url 'client_create' %}">Add a client</a> first.</div>{% for e in form.client.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>
+    {% include "includes/field.html" with field=form.contact %}
+    {% include "includes/field.html" with field=form.service_type %}
+    {% include "includes/field.html" with field=form.template %}
+    {% include "includes/field.html" with field=form.owner %}
+    {% include "includes/field.html" with field=form.due_date %}
+    {% include "includes/field.html" with field=form.location extra_class="full" %}
+    {% include "includes/field.html" with field=form.summary extra_class="full" %}
+  </div>
+  <div class="form-actions"><button class="btn btn-primary">Create proposal</button><a class="btn btn-ghost" href="{% url 'proposal_list' %}">Cancel</a></div>
+</form></div></div>
+{% if request.GET.client %}<script>document.addEventListener("DOMContentLoaded",()=>{htmx.trigger("#{{ form.client.id_for_label }}","change")})</script>{% endif %}
+{% endblock %}

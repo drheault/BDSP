@@ -1,0 +1,4 @@
+<tr id="role-{{ role.pk }}"><td colspan="3"><form hx-post="{% url 'role_edit' role.pk %}" hx-target="#roles" class="inline-form">
+  <div class="field"><label>Title</label>{{ form.title }}</div><div class="field narrow"><label>Rate / h</label>{{ form.default_rate }}</div>
+  <div class="field check narrow">{{ form.is_active }}<label>Active</label></div>
+  <button class="btn btn-primary btn-sm">Save</button><button type="button" class="btn btn-ghost btn-sm" hx-get="{% url 'library' %}" hx-select="#roles > *" hx-target="#roles">Cancel</button></form></td></tr>

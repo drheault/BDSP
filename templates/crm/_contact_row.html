@@ -1,0 +1,6 @@
+<tr id="contact-{{ contact.pk }}">
+  <td><strong>{{ contact.name }}</strong>{% if contact.is_primary %} <span class="badge badge-won">primary</span>{% endif %}</td>
+  <td>{{ contact.title|default:"—" }}</td><td>{% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}</td><td>{{ contact.phone|default:"—" }}</td>
+  <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'contact_edit' contact.pk %}" hx-target="#contact-{{ contact.pk }}" hx-swap="outerHTML">Edit</button>
+  <button class="btn btn-xs btn-danger" hx-post="{% url 'contact_delete' contact.pk %}" hx-confirm="Remove {{ contact.name }}?" hx-target="#contact-{{ contact.pk }}" hx-swap="outerHTML swap:150ms">Remove</button></td>
+</tr>

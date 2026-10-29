@@ -1,0 +1,28 @@
+{% if gantt %}
+<div class="gantt-wrap">
+<svg class="gantt {% if compact %}fit{% endif %}" width="{{ gantt.width }}" height="{{ gantt.height }}" viewBox="0 0 {{ gantt.width }} {{ gantt.height }}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gantt chart">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#74838f"/></marker></defs>
+  {% for m in gantt.months %}<rect class="month" x="{{ m.x }}" y="0" width="{{ m.w }}" height="22"/><text class="month-label" x="{{ m.x|add:6 }}" y="15">{{ m.label }}</text>{% endfor %}
+  {% for r in gantt.rows %}{% if r.zebra %}<rect class="zebra" x="{{ gantt.label_w }}" y="{{ r.y }}" width="{{ gantt.width }}" height="{{ gantt.row_h }}"/>{% endif %}{% endfor %}
+  {% for w in gantt.weeks %}<line class="week" x1="{{ w.x }}" y1="22" x2="{{ w.x }}" y2="{{ gantt.height }}"/>{% if w.label %}<text class="week-label" x="{{ w.x|add:2 }}" y="36">{{ w.label }}</text>{% endif %}{% endfor %}
+  <line class="rowline" x1="0" y1="{{ gantt.header_h }}" x2="{{ gantt.width }}" y2="{{ gantt.header_h }}"/>
+  <rect class="labelbg" x="0" y="{{ gantt.header_h }}" width="{{ gantt.label_w }}" height="{{ gantt.height }}"/>
+  {% for r in gantt.rows %}
+  <g class="row-link">
+    <line class="rowline" x1="0" y1="{{ r.y|add:gantt.row_h }}" x2="{{ gantt.width }}" y2="{{ r.y|add:gantt.row_h }}"/>
+    <text class="label {% if r.is_milestone %}ms{% endif %}" x="10" y="{{ r.cy|add:4 }}">{% if r.is_milestone %}◆ {% endif %}{{ r.task.name|truncatechars:30 }}</text>
+    {% if r.is_milestone %}
+      <rect class="ms" x="{{ r.x|add:-7 }}" y="{{ r.cy|add:-7 }}" width="14" height="14" transform="rotate(45 {{ r.x }} {{ r.cy }})" fill="{{ r.color }}"><title>{{ r.task.name }} — {{ r.label }}</title></rect>
+      <text class="sub" x="{{ r.x|add:12 }}" y="{{ r.cy|add:4 }}">{{ r.label }}</text>
+    {% else %}
+      <rect class="bar" x="{{ r.x }}" y="{{ r.y|add:7 }}" width="{{ r.w }}" height="{{ gantt.row_h|add:-14 }}" fill="{{ r.color }}"><title>{{ r.task.name }} — {{ r.label }} ({{ r.task.percent_complete }}%)</title></rect>
+      {% if r.progress_w %}<rect class="bar-progress" x="{{ r.x }}" y="{{ r.y|add:7 }}" width="{{ r.progress_w }}" height="{{ gantt.row_h|add:-14 }}"/>{% endif %}
+      {% if r.w > 92 %}<text class="bar-label" x="{{ r.x|add:6 }}" y="{{ r.cy|add:4 }}">{{ r.label }}</text>{% else %}<text class="sub" x="{{ r.x|add:r.w|add:5 }}" y="{{ r.cy|add:4 }}">{{ r.label }}</text>{% endif %}
+    {% endif %}
+  </g>
+  {% endfor %}
+  {% for d in gantt.deps %}<path class="dep" d="{{ d.d }}"/>{% endfor %}
+  {% if gantt.today_x %}<line class="today" x1="{{ gantt.today_x }}" y1="22" x2="{{ gantt.today_x }}" y2="{{ gantt.height }}"/><text class="today-label" x="{{ gantt.today_x|add:3 }}" y="{{ gantt.header_h|add:-2 }}">today</text>{% endif %}
+</svg>
+</div>
+{% endif %}

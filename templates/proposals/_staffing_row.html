@@ -1,0 +1,6 @@
+{% load humanize %}<tr id="line-{{ line.pk }}">
+  <td><strong>{{ line.role }}</strong></td><td>{{ line.task|default:"—" }}</td>
+  <td class="num">{{ line.hours|floatformat:1 }}</td><td class="num">${{ line.rate|floatformat:0 }}</td><td class="num">${{ line.amount|floatformat:0|intcomma }}</td>
+  <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'staffing_edit' line.pk %}" hx-target="#line-{{ line.pk }}" hx-swap="outerHTML">Edit</button>
+  <button class="btn btn-xs btn-danger" hx-post="{% url 'staffing_delete' line.pk %}" hx-target="#staffing" hx-swap="innerHTML" hx-on::after-request="htmx.ajax('GET','{% url 'proposal_fee' line.proposal_id %}',{target:'#fee-summary',select:'#fee-summary > *',swap:'innerHTML'})">×</button></td>
+</tr>

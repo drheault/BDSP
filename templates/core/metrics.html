@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Metrics{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>BD metrics</h1><div class="sub">Win/loss analysis across {{ decided_count }} decided pursuit{{ decided_count|pluralize }} · ${{ total_value_won|floatformat:0|intcomma }} won</div></div></div>
+{% if not decided_count %}<div class="callout mb">No proposals have been marked won or lost yet. Metrics fill in as pursuits are decided.</div>{% endif %}
+<div class="grid grid-2">
+  <div class="card"><div class="card-head"><h3>Win rate by client sector</h3></div><div class="card-body">
+    <div class="bars">{% for r in by_sector %}<div class="row"><span>{{ r.label }}</span><div class="track"><i class="won" style="width:{{ r.rate }}%"></i><i class="lost" style="flex:1"></i></div><span class="pct">{{ r.won }}/{{ r.total }} · {{ r.rate }}%</span></div>{% empty %}<span class="muted">No data yet.</span>{% endfor %}</div>
+  </div></div>
+  <div class="card"><div class="card-head"><h3>Win rate by service type</h3></div><div class="card-body">
+    <div class="bars">{% for r in by_service %}<div class="row"><span>{{ r.label }}</span><div class="track"><i class="won" style="width:{{ r.rate }}%"></i><i class="lost" style="flex:1"></i></div><span class="pct">{{ r.won }}/{{ r.total }} · {{ r.rate }}%</span></div>{% empty %}<span class="muted">No data yet.</span>{% endfor %}</div>
+  </div></div>
+  <div class="card"><div class="card-head"><h3>Win rate by pursuit lead</h3></div><div class="card-body">
+    <div class="bars">{% for r in by_owner %}<div class="row"><span>{{ r.label }}</span><div class="track"><i class="won" style="width:{{ r.rate }}%"></i><i class="lost" style="flex:1"></i></div><span class="pct">{{ r.won }}/{{ r.total }} · {{ r.rate }}%</span></div>{% empty %}<span class="muted">No data yet.</span>{% endfor %}</div>
+  </div></div>
+  <div class="card"><div class="card-head"><h3>Submissions per month</h3></div><div class="card-body">
+    {% if monthly %}<div class="cols">{% for m in monthly %}<div class="c" title="{{ m.n }} submitted"><b style="height:{% widthratio m.n max_month 100 %}%"></b><span>{{ m.submitted_at__month }}/{{ m.submitted_at__year|slice:"2:" }}</span></div>{% endfor %}</div>{% else %}<span class="muted">No submissions recorded yet.</span>{% endif %}
+  </div></div>
+</div>
+<div class="callout mt">Roadmap: once timesheets are connected, this page will compare estimated vs. actual hours per role and per phase, and surface which pursuit types are most profitable.</div>
+{% endblock %}

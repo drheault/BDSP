@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Proposal templates{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Proposal templates</h1><div class="sub">Reusable section outlines. New proposals copy a template's sections so they can be edited freely.</div></div>
+<div class="actions"><a class="btn btn-primary" href="{% url 'template_create' %}">+ New template</a></div></div>
+<div class="grid grid-3">
+{% for t in templates %}
+  <div class="card"><div class="card-body">
+    <div class="row-flex"><h3 style="margin:0"><a href="{% url 'template_detail' t.pk %}">{{ t.name }}</a></h3>{% if t.is_default %}<span class="badge badge-won">default</span>{% endif %}</div>
+    <div class="muted mt-sm"><span class="badge badge-{{ t.service_type }}">{{ t.get_service_type_display }}</span> · {{ t.sections.count }} section{{ t.sections.count|pluralize }}</div>
+    {% if t.description %}<p class="mt-sm" style="font-size:.9rem">{{ t.description }}</p>{% endif %}
+    <ol class="muted" style="padding-left:1.1rem;margin:.5rem 0 0">{% for s in t.sections.all|slice:":6" %}<li>{{ s.title }}</li>{% endfor %}{% if t.sections.count > 6 %}<li>…</li>{% endif %}</ol>
+    <div class="form-actions"><a class="btn btn-sm" href="{% url 'template_detail' t.pk %}">Edit</a>
+      <form method="post" action="{% url 'template_duplicate' t.pk %}">{% csrf_token %}<button class="btn btn-sm">Duplicate</button></form></div>
+  </div></div>
+{% empty %}<div class="card span-2"><div class="empty"><strong>No templates</strong>Run <code>python manage.py seed</code> to load the defaults, or create one.</div></div>{% endfor %}
+</div>
+{% endblock %}

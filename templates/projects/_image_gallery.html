@@ -1,0 +1,8 @@
+<div class="card-body">
+  <div class="imgs" id="imgs">{% for img in project.images.all %}{% include "projects/_image_card.html" %}{% empty %}<span class="muted">No images yet.</span>{% endfor %}</div>
+  <form class="inline-form mt" hx-post="{% url 'image_add' project.pk %}" hx-target="#gallery" hx-encoding="multipart/form-data">
+    <div class="field"><label>Add images</label><input type="file" name="images" accept="image/*" multiple required></div>
+    <div class="field"><label>Caption (applied to all)</label>{{ upload_form.caption }}</div>
+    <button class="btn btn-primary btn-sm">Upload <span class="htmx-indicator">…</span></button>
+  </form>
+</div>

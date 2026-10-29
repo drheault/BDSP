@@ -1,0 +1,1 @@
+<div id="sections">{% for section in template.sections.all %}{% include "proposals/_tsection_card.html" %}{% empty %}<div class="card"><div class="empty"><strong>No sections yet</strong>Add the first section below.</div></div>{% endfor %}</div>

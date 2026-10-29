@@ -1,0 +1,4 @@
+{% for c in clients %}
+<tr><td><a class="strong" href="{% url 'client_detail' c.pk %}">{{ c.name }}</a>{% if c.website %}<br><small><a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website|cut:"https://"|cut:"http://" }}</a></small>{% endif %}</td>
+<td>{{ c.get_sector_display }}</td><td class="num">{{ c.n_contacts }}</td><td class="num">{{ c.n_proposals }}</td></tr>
+{% empty %}<tr><td colspan="4"><div class="empty"><strong>No clients found</strong>Try another search or add a client.</div></td></tr>{% endfor %}

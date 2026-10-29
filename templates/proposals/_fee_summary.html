@@ -1,0 +1,11 @@
+{% load humanize %}
+<div class="card"><div class="card-body">
+  <h3>Fee summary</h3>
+  <div class="kv">
+    <span class="k">Labour</span><span>${{ proposal.labour_total|floatformat:0|intcomma }} <small class="muted">({{ proposal.total_hours|floatformat:0 }} h)</small></span>
+    <span class="k">Expenses</span><span>${{ proposal.expenses_total|floatformat:0|intcomma }}{% if proposal.markup_percent %} <small class="muted">incl. {{ proposal.markup_percent|floatformat:0 }}% markup</small>{% endif %}</span>
+    <span class="k">Total fee</span><span style="font-size:1.3rem;font-weight:700">${{ proposal.fee_total|floatformat:0|intcomma }}</span>
+    {% if proposal.manual_value is not None %}<span class="k"></span><span class="muted">Manual override in effect</span>{% endif %}
+    <span class="k">Weighted</span><span>${{ proposal.weighted_value|floatformat:0|intcomma }} <small class="muted">at {{ proposal.probability }}%</small></span>
+  </div>
+</div></div>

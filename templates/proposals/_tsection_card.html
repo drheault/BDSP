@@ -1,0 +1,8 @@
+<div class="section-card" id="section-{{ section.pk }}">
+  <div class="sc-head"><span class="n">{{ section.order|add:1 }}</span><h3>{{ section.title }}</h3>
+    <button class="btn btn-xs btn-ghost" hx-post="{% url 'tsection_move' section.pk 'up' %}" hx-target="#section-list" hx-swap="innerHTML">↑</button>
+    <button class="btn btn-xs btn-ghost" hx-post="{% url 'tsection_move' section.pk 'down' %}" hx-target="#section-list" hx-swap="innerHTML">↓</button>
+    <button class="btn btn-sm" hx-get="{% url 'tsection_edit' section.pk %}" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML">Edit</button>
+    <button class="btn btn-sm btn-danger" hx-post="{% url 'tsection_delete' section.pk %}" hx-confirm="Delete “{{ section.title }}”?" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML swap:150ms">Delete</button></div>
+  <div class="sc-body">{{ section.body }}</div>
+</div>
