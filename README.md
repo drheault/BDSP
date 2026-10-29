@@ -151,9 +151,10 @@ hide controls with `{% if can.capability %}`. Seeded roles: Partners (all),
 Associates, Engineers, HR-Global, HR-Local, IT, Admins — edit freely or add
 your own.
 
-Demo logins after `seed --demo`: `admin`/`admin` (superuser), `mrivera`
-(Partners), `jchen` (Associates), `dokafor` (Engineers), all with password
-`password` except admin.
+Accounts after `seed`: the key staff from dr-sauer.com (usernames like
+`gskalla`, `drheault`; email first-initial + last name @dr-sauer.com) with the
+password `changeme`, plus `admin`/`admin`. `seed --demo` adds a
+`demo.engineer` account (password `password`) for role previews.
 
 ## Configuration
 

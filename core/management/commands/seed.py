@@ -96,6 +96,21 @@ ROLES_ACCESS = [
     ("Admins", 90, "Office administration: settings, users, templates.", ["view_proposals", "manage_settings", "manage_users", "manage_projects_library"]),
 ]
 
+# Key staff from dr-sauer.com (Key Staff / Meet the Team). Email rule: first initial + last name @dr-sauer.com.
+STAFF = [
+    # username, first, last, title, office code, access role, staff role, superuser
+    ("gsauer", "Gerhard", "Sauer", "Senior Partner", "DSP-Salzburg", "Partners", "Principal", False),
+    ("jlaubbichler", "Juergen", "Laubbichler", "Managing Director & Partner", "DSP-Salzburg", "Partners", "Principal", False),
+    ("gskalla", "Gerald", "Skalla", "Managing Director & Partner", "DSP-London", "Partners", "Principal", False),
+    ("blyons", "Brian", "Lyons", "Managing Director & Partner", "DSP-London", "Partners", "Principal", False),
+    ("tschwind", "Thomas", "Schwind", "Technical Director & Partner", "DSP-London", "Partners", "Principal", False),
+    ("afeiersinger", "Andreas", "Feiersinger", "Operations Director & Partner", "DSP-London", "Partners", "Principal", False),
+    ("fwilhelmstoetter", "Franz", "Wilhelmstoetter", "Managing Director US & Partner", "DSP-Washington", "Partners", "Principal", False),
+    ("ckarner", "Christian", "Karner", "Senior Tunnel Engineer & Partner", "DSP-Washington", "Partners", "Principal", False),
+    ("psalak", "Petr", "Salak", "Managing Director Israel", "DSP-TelAviv", "Partners", "Principal", False),
+    ("drheault", "David", "Rheault", "Deputy Technical Director & Senior Associate", "DSP-Toronto", "Associates", "Senior Associate", True),
+]
+
 EMPLOYEES = [
     # name, role, billing rate, cost rate (CAD/h)
     ("Maria Rivera", "Principal", 295, 140),
@@ -288,6 +303,7 @@ class Command(BaseCommand):
         for name, url in NEWS_SOURCES:
             NewsSource.objects.get_or_create(url=url, defaults={"name": name})
         self.stdout.write(f"Offices: {Office.objects.count()}, news sources: {NewsSource.objects.count()}")
+
         ensure_builtins()
         for name, purpose, phases, path, tpl, order in (
             ("Projects (dc120)", "projects", "CDE", r"\\dc120\projects", "{country}/{project_number}", 0),
@@ -324,6 +340,25 @@ class Command(BaseCommand):
             Employee.objects.get_or_create(name=name, defaults={"role": roles[role], "rate": rate, "cost_rate": cost, "office": Office.objects.filter(code=office_cycle[i % len(office_cycle)]).first()})
         self.stdout.write(f"Services: {Service.objects.count()}, roles: {StaffRole.objects.count()}, employees: {Employee.objects.count()}")
 
+        role_objs = {r.title: r for r in StaffRole.objects.all()}
+        created_staff = 0
+        for username, first, last, title, office_code, access, staff_role, su in STAFF:
+            email = f"{first[0].lower()}{last.lower()}@dr-sauer.com"
+            u, created = User.objects.get_or_create(username=username, defaults={"first_name": first, "last_name": last, "email": email, "is_staff": su, "is_superuser": su})
+            if created:
+                u.set_password("changeme")
+                u.save()
+                created_staff += 1
+            office = Office.objects.filter(code=office_code).first()
+            Profile.objects.update_or_create(user=u, defaults={"title": title, "office": office})
+            AccessRole.objects.get(name=access).users.add(u)
+            emp, _ = Employee.objects.get_or_create(name=f"{first} {last}", defaults={"role": role_objs[staff_role], "rate": role_objs[staff_role].default_rate, "email": email, "office": office, "user": u})
+            if not emp.user_id:
+                emp.user = u
+                emp.save(update_fields=["user"])
+        if created_staff:
+            self.stdout.write(self.style.WARNING(f"Created {created_staff} staff accounts from dr-sauer.com with password 'changeme' — change them under Roles & users."))
+
         for name, stype, desc, sections in (DESIGN_TEMPLATE, CONSTRUCTION_TEMPLATE, STUDY_TEMPLATE):
             t, created = ProposalTemplate.objects.get_or_create(
                 name=name, defaults={"service_type": stype, "description": desc, "is_default": stype == "design"}
@@ -344,16 +379,9 @@ class Command(BaseCommand):
             self.stdout.write("Demo data already present; skipping.")
             return
         today = timezone.localdate()
-        lead1, _ = User.objects.get_or_create(username="mrivera", defaults={"first_name": "Maria", "last_name": "Rivera", "email": "mrivera@example.com"})
-        lead2, _ = User.objects.get_or_create(username="jchen", defaults={"first_name": "James", "last_name": "Chen", "email": "jchen@example.com"})
-        for u in (lead1, lead2):
-            if not u.password:
-                u.set_password("password")
-                u.is_staff = True
-                u.save()
-        AccessRole.objects.get(name="Partners").users.add(lead1)
-        AccessRole.objects.get(name="Associates").users.add(lead2)
-        eng, _ = User.objects.get_or_create(username="dokafor", defaults={"first_name": "Daniel", "last_name": "Okafor", "email": "dokafor@example.com"})
+        lead1 = User.objects.get(username="gskalla")   # Partner, London
+        lead2 = User.objects.get(username="drheault")  # Senior Associate, Toronto
+        eng, _ = User.objects.get_or_create(username="demo.engineer", defaults={"first_name": "Demo", "last_name": "Engineer", "email": "demo.engineer@example.com"})
         if not eng.password:
             eng.set_password("password")
             eng.save()
@@ -362,11 +390,15 @@ class Command(BaseCommand):
         tor, lon_, slz = Office.objects.get(code="DSP-Toronto"), Office.objects.get(code="DSP-London"), Office.objects.get(code="DSP-Salzburg")
         AccessRole.objects.get(name="Partners").capabilities = AccessRole.objects.get(name="Partners").capabilities  # noqa
         for u, title, office, have, learning in (
-            (lead1, "Partner", "Toronto", [("SEM / NATM design", 5), ("Cavern design", 5), ("Proposal writing", 5), ("Client relations", 5), ("Mentoring", 4)], []),
-            (lead2, "Senior Associate", "Toronto", [("Segmental lining design", 4), ("Fee estimating", 4), ("Numerical modelling (FE/FD)", 4), ("Plaxis", 4), ("Project management", 4)], ["Cavern design"]),
-            (eng, "Engineer", "Toronto", [("Numerical modelling (FE/FD)", 2), ("Plaxis", 3), ("Settlement & building damage assessment", 2)], ["SEM / NATM design", "Fee estimating", "Face stability"]),
+            (lead1, None, lon_, [("SEM / NATM design", 5), ("Cavern design", 5), ("Proposal writing", 5), ("Client relations", 5), ("Mentoring", 4)], []),
+            (lead2, None, tor, [("Segmental lining design", 4), ("Fee estimating", 4), ("Numerical modelling (FE/FD)", 4), ("Plaxis", 4), ("Project management", 4)], ["Cavern design"]),
+            (eng, "Engineer (demo account)", tor, [("Numerical modelling (FE/FD)", 2), ("Plaxis", 3), ("Settlement & building damage assessment", 2)], ["SEM / NATM design", "Fee estimating", "Face stability"]),
         ):
-            Profile.objects.update_or_create(user=u, defaults={"title": title, "office": tor})
+            prof, _ = Profile.objects.get_or_create(user=u)
+            prof.office = office
+            if title:
+                prof.title = title
+            prof.save()
             for name, lvl in have:
                 UserSkill.objects.update_or_create(user=u, skill=Skill.objects.get(name=name), defaults={"self_level": lvl, "is_learning": False})
             for name in learning:
@@ -399,7 +431,7 @@ class Command(BaseCommand):
 
         p1 = Proposal.objects.create(
             title="Eastside Extension – Twin-Bore Running Tunnels Final Design", client=transit, contact=c1,
-            service_type="design", owner=lead1, status="drafting", due_date=today + timedelta(days=18),
+            service_type="design", owner=lead2, status="drafting", due_date=today + timedelta(days=18),
             probability=60, location="Downtown to Eastside, 4.2 km", currency=cad, contingency_percent=5, region=on,
             summary="Final design of 4.2 km twin-bore EPB TBM tunnels (6.5 m ID) with six cross-passages and two ventilation shafts in mixed-face glacial soils beneath an urban corridor.",
         )
@@ -438,7 +470,7 @@ class Command(BaseCommand):
 
         p3 = Proposal.objects.create(
             title="Harbour Crossing – Immersed vs. Bored Tunnel Options Study", client=transit, contact=c1,
-            service_type="other", owner=lead1, status="lead", due_date=today + timedelta(days=40), probability=35,
+            service_type="other", owner=lead2, status="lead", due_date=today + timedelta(days=40), probability=35,
             location="Harbour crossing, 1.8 km", manual_value=185000, currency=cad, region=on,
             summary="Comparative study of immersed-tube and bored tunnel options for the harbour crossing, covering constructability, cost, schedule and risk.",
         )
@@ -483,7 +515,7 @@ class Command(BaseCommand):
 
         Proposal.objects.create(
             title="Westfield Stormwater Tunnel Preliminary Design", client=water, contact=c2, service_type="design",
-            owner=lead1, status="lost", due_date=today - timedelta(days=150), probability=0, manual_value=640000, currency=cad, region=bc, sequence=601,
+            owner=lead2, status="lost", due_date=today - timedelta(days=150), probability=0, manual_value=640000, currency=cad, region=bc, sequence=601,
             summary="Preliminary design of a 2.4 km stormwater storage tunnel.", notes="Lost on price; incumbent retained.",
         )
         Proposal.objects.create(
@@ -492,7 +524,7 @@ class Command(BaseCommand):
         )
         # assign B numbers to the live pursuits and log history
         for p in (p1, p2):
-            p.assign_project_number(user=lead1)
+            p.assign_project_number(user=lead2)
         from proposals.models import PhaseChange, ProjectRecord
 
         for ph, note in (("B", "Number assigned"), ("C", "Contract signed"), ("D", "Design development started")):
@@ -551,7 +583,7 @@ class Command(BaseCommand):
             if not pr_.office_id:
                 pr_.office = tor
                 pr_.save(update_fields=["office"])
-        Proposal.objects.create(title="Thames Tideway East – Secondary Lining Peer Review", client=transit, service_type="other", owner=lead2, status="submitted", due_date=today - timedelta(days=3), probability=55, manual_value=120000, currency=Currency.objects.get(code="GBP"), office=lon_, region=Region.objects.get(code="GBR"))
+        Proposal.objects.create(title="Thames Tideway East – Secondary Lining Peer Review", client=transit, service_type="other", owner=lead1, status="submitted", due_date=today - timedelta(days=3), probability=55, manual_value=120000, currency=Currency.objects.get(code="GBP"), office=lon_, region=Region.objects.get(code="GBR"))
         for i, (title, src) in enumerate([
             ("TBM breakthrough completes twin-bore drive beneath city centre", "Tunnelling Journal"), ("Fibre-reinforced segmental linings: lessons from three recent metro projects", "Tunnels & Tunnelling"),
             ("Ground freezing adopted for cross-passages on harbour crossing", "Tunnelling Journal"), ("NCE Tunnelling Festival shortlist announced", "New Civil Engineer – Tunnelling"),
@@ -564,4 +596,4 @@ class Command(BaseCommand):
             ProposalAttachment.objects.get_or_create(proposal=p1, project=s_["sheet"], defaults={"kind": "sheet", "order": i})
 
         self.stdout.write(f"Demo: {Client.objects.count()} clients, {Proposal.objects.count()} proposals, {PastProject.objects.count()} project sheets.")
-        self.stdout.write(self.style.WARNING("Demo users mrivera / jchen have password 'password'."))
+        self.stdout.write(self.style.WARNING("Demo engineer account demo.engineer has password 'password'."))
