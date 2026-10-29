@@ -1,0 +1,2 @@
+<div class="card-head"><h3>Recently added project sheets</h3><a class="btn btn-sm" href="{% url 'project_list' %}">All</a></div>
+<table class="tbl"><tbody>{% for p in ctx.items %}<tr><td>{% if p.cover %}<img class="thumb" src="{{ p.cover.image.url }}" alt="">{% else %}<span class="thumb thumb-empty"></span>{% endif %}</td><td><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a><br><small class="muted">{{ p.display_client }} · {{ p.updated_at|date:"j M" }}</small></td></tr>{% empty %}<tr><td class="muted">No sheets yet.</td></tr>{% endfor %}</tbody></table>

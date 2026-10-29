@@ -14,6 +14,12 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ["avatar", "title", "office", "bio", "open_to_mentor", "looking_for_mentor", "linkedin"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Office
+
+        self.fields["office"].queryset = Office.objects.filter(is_active=True)
         widgets = {"bio": forms.Textarea(attrs={"rows": 4})}
 
 

@@ -1,0 +1,6 @@
+# Optional: renders the Gantt chart as an image inside Word exports.
+# Needs the cairo system library first:
+#   macOS:   brew install cairo pkg-config
+#   Ubuntu:  sudo apt install libcairo2-dev pkg-config
+#   Windows: pip install pycairo (wheels are available)
+rlPyCairo>=0.3

@@ -1,0 +1,2 @@
+<div class="card-head"><h3>Upcoming milestones</h3><a class="btn btn-sm" href="{% url 'programme' %}">Programme</a></div>
+<table class="tbl"><tbody>{% for t in ctx.items %}<tr><td><span class="dot" style="background:{{ t.color }}"></span>{{ t.name }}<br><small><a href="{% url 'proposal_schedule' t.proposal.pk %}">{{ t.proposal.number }}</a> {{ t.proposal.title|truncatechars:30 }}</small></td><td class="right">{{ t.start|date:"j M" }}</td></tr>{% empty %}<tr><td class="muted">No milestones in the next 90 days.</td></tr>{% endfor %}</tbody></table>

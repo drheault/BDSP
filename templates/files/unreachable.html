@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ root.name }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'file_home' %}">File server</a> / {{ root.name }}{% if rel %} / {{ rel }}{% endif %}</div><h1>{{ problem.title }}</h1></div></div>
+<div class="card" style="max-width:760px"><div class="card-body">
+  <div class="row-flex" style="align-items:flex-start;gap:1rem">
+    <div class="unreach-icon {{ problem.kind }}">{% if problem.kind == "network" %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a14 14 0 0 1 20 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/><path d="M3 3l18 18"/></svg>{% elif problem.kind == "auth" %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>{% else %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v4M12 18h.01"/></svg>{% endif %}</div>
+    <div style="flex:1">
+      <p style="font-size:1.05rem">{{ problem.advice }}</p>
+      {% if problem.kind == "network" %}<ol style="padding-left:1.2rem;line-height:1.8"><li>Connect to the office VPN, or make sure the computer is joined to the dr-sauer domain and on the LAN.</li><li>Wait a few seconds for the network to settle.</li><li>Press <strong>Try again</strong>.</li></ol>{% endif %}
+      <div class="row-flex mt"><a class="btn btn-primary" href="{{ request.path }}">Try again</a><a class="btn" href="{% url 'file_home' %}">All locations</a>{% if can.manage_integrations %}<a class="btn btn-ghost" href="{% url 'file_home' %}#roots">Edit this location</a>{% endif %}</div>
+      <details class="mt"><summary class="muted" style="cursor:pointer">Technical detail</summary><pre class="mono muted" style="white-space:pre-wrap;font-size:.8rem">{{ root.get_kind_display }} · {{ root.path }}{% if rel %}/{{ rel }}{% endif %}
+{{ problem.detail }}</pre></details>
+    </div>
+  </div>
+</div></div>
+{% endblock %}

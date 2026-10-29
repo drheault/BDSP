@@ -1,0 +1,4 @@
+{% load bdsp %}<div class="card-head"><h3>Offices</h3><span class="muted">last 90 days of booked hours</span></div>
+<div class="table-wrap"><table class="tbl"><thead><tr><th>Office</th><th class="num">People</th><th class="num">Open pursuits</th><th class="num">Pipeline</th><th class="num">Won</th><th class="num">Hours (90 d)</th><th>Note</th></tr></thead><tbody>
+{% for r in ctx.rows %}<tr><td><strong>{{ r.office.code }}</strong>{% if r.office.is_hq %} <span class="badge">HQ</span>{% endif %}<br><small class="muted">{{ r.office.city }}</small></td><td class="num">{{ r.employees }}</td><td class="num">{{ r.open }}</td><td class="num">{{ r.pipeline|money:ctx.base }}</td><td class="num">{{ r.won }}</td><td class="num">{{ r.hours|num:0 }}</td><td><small class="muted">{{ r.office.notes }}</small></td></tr>{% endfor %}
+</tbody></table></div>

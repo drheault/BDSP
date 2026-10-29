@@ -1,0 +1,2 @@
+{% load bdsp %}<div class="card-head"><h3>My pursuits</h3><a class="btn btn-sm" href="{% url 'proposal_list' %}?owner={{ user.pk }}">All</a></div>
+<table class="tbl"><tbody>{% for p in ctx.items %}<tr><td><a href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:40 }}</a><br><small>{{ p.client|default:"" }} · {{ p.fee_total|money:p.cur }}</small></td><td class="right">{% include "proposals/_status_badge.html" with proposal=p %}</td></tr>{% empty %}<tr><td class="muted">No proposals assigned to you.</td></tr>{% endfor %}</tbody></table>

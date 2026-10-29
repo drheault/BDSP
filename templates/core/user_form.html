@@ -4,7 +4,7 @@
 <div class="page-head"><div><div class="crumbs"><a href="{% url 'users' %}">Users</a> /</div><h1>{% if obj %}{{ obj.get_full_name|default:obj.username }}{% else %}New user{% endif %}</h1></div></div>
 <div class="card" style="max-width:820px"><div class="card-body"><form method="post">{% csrf_token %}
   {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
-  <div class="form-grid">{% include "includes/field.html" with field=form.username %}{% include "includes/field.html" with field=form.email %}{% include "includes/field.html" with field=form.first_name %}{% include "includes/field.html" with field=form.last_name %}{% include "includes/field.html" with field=form.password %}
+  <div class="form-grid">{% include "includes/field.html" with field=form.username %}{% include "includes/field.html" with field=form.email %}{% include "includes/field.html" with field=form.first_name %}{% include "includes/field.html" with field=form.last_name %}{% include "includes/field.html" with field=form.password %}{% include "includes/field.html" with field=form.office %}
   <div class="field"><label>&nbsp;</label>{% include "includes/field.html" with field=form.is_active %}{% include "includes/field.html" with field=form.is_staff %}</div></div>
   <h3 class="mt">Roles</h3><ul class="checks">{% for cb in form.roles %}<li>{{ cb }}</li>{% endfor %}</ul>
   <div class="form-actions"><button class="btn btn-primary">Save user</button><a class="btn btn-ghost" href="{% url 'users' %}">Cancel</a></div>

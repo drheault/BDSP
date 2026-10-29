@@ -1,0 +1,2 @@
+<div class="card-head"><h3>Top calculation tools</h3><a class="btn btn-sm" href="{% url 'tool_list' %}">All tools</a></div>
+<table class="tbl"><tbody>{% for r in ctx.rows %}<tr><td><a href="{% url 'tool_detail' r.tool.key %}">{{ r.tool.name }}</a><br><small class="muted">{{ r.tool.category }}</small></td><td class="right"><small>▲ {{ r.up }} · {% if r.rating.n %}★ {{ r.rating.avg }}{% else %}unrated{% endif %}</small></td></tr>{% endfor %}</tbody></table>

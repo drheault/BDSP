@@ -1,0 +1,8 @@
+{% load bdsp %}<div class="card-body">
+<div class="grid grid-4 mb">
+  <div class="stat"><div class="k">Open pursuits</div><div class="v">{{ ctx.open_count }}</div><div class="d">lead → shortlisted</div></div>
+  <div class="stat"><div class="k">Pipeline value</div><div class="v">{{ ctx.pipeline_value|money:ctx.base }}</div><div class="d">open fees, in {{ ctx.base.code }}</div></div>
+  <div class="stat"><div class="k">Weighted pipeline</div><div class="v">{{ ctx.weighted_value|money:ctx.base }}</div><div class="d">fee × probability</div></div>
+  <div class="stat"><div class="k">Win rate</div><div class="v">{% if ctx.win_rate is not None %}{{ ctx.win_rate }}%{% else %}—{% endif %}</div><div class="d">{{ ctx.won }} won · {{ ctx.lost }} lost</div></div>
+</div>
+<div class="pipeline">{% for s in ctx.pipeline %}<a href="{% url 'proposal_list' %}?status={{ s.key }}"><div class="n">{{ s.count }}</div><div class="l">{{ s.label }}</div></a>{% endfor %}</div></div>

@@ -41,3 +41,12 @@ class FileTests(TestCase):
         self.assertEqual(self.p.records.count(), 2)
         self.client.post(reverse("sync_project", args=[self.p.pk]), {"root": self.root.pk})
         self.assertEqual(self.p.records.count(), 2)  # idempotent
+
+
+    def test_unreachable_share_shows_guidance(self):
+        bad = FileRoot.objects.create(name="VPN share", kind="mount", path="/nonexistent/dc120/projects")
+        r = self.client.get(reverse("file_browse", args=[bad.pk, ""]))
+        self.assertContains(r, "be reached from here")
+        self.assertContains(r, "VPN")
+        r = self.client.get(reverse("file_home"))
+        self.assertContains(r, "not reachable")

@@ -1,0 +1,4 @@
+<div class="card-head"><h3>Quick links</h3></div>
+<div class="card-body cfg-links">
+  <a href="{% url 'proposal_list' %}">Proposals</a><a href="{% url 'programme' %}">Programme</a><a href="{% url 'tool_list' %}">Calculations</a><a href="{% url 'project_list' %}">Project sheets</a><a href="{% url 'people' %}">People &amp; skills</a><a href="{% url 'file_home' %}">File server</a>{% if can.view_metrics %}<a href="{% url 'metrics' %}">Metrics</a>{% endif %}
+</div>

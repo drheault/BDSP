@@ -11,6 +11,26 @@ from core.permissions import has_cap, require_cap
 from proposals.models import ProjectRecord, Proposal
 
 from .backends import BackendError, backend_for
+
+
+def _classify(exc: Exception) -> dict:
+    """Turn a connection problem into something a person can act on."""
+    msg = str(exc)
+    low = msg.lower()
+    if any(k in low for k in ("timed out", "timeout", "unreachable", "no route", "name or service", "getaddrinfo", "connection refused", "errno 111", "errno 113", "errno 110", "not reachable", "is the share mounted", "nodename nor servname")):
+        return {"kind": "network", "title": "The file server can't be reached from here", "advice": "This usually means you are not on the office network. Connect to the VPN (or plug into the dr-sauer domain) and try again. If you are already connected, the share may be offline or the server address may have changed."}
+    if any(k in low for k in ("access", "denied", "logon", "password", "credential", "status_logon_failure", "permission")):
+        return {"kind": "auth", "title": "The file server refused the login", "advice": "The stored username or password for this location is wrong or has expired. An IT or integrations user can update it under File server → Add or edit a share."}
+    if "not found" in low or "no such" in low:
+        return {"kind": "missing", "title": "That folder doesn't exist on the share", "advice": "The project folder may not have been created yet, or the folder rule for this location needs adjusting."}
+    return {"kind": "other", "title": "The file server returned an error", "advice": "Try again in a moment. If it keeps happening, send the message below to IT."}
+
+
+def _safe_backend(root):
+    try:
+        return backend_for(root), None
+    except Exception as e:  # smbprotocol raises its own types on connect
+        return None, e
 from .forms import FileRootForm
 from .models import FileRoot, SyncLog
 
@@ -31,9 +51,10 @@ def file_home(request):
     roots = FileRoot.objects.filter(is_active=True)
     status = []
     for r in roots:
+        b, err = _safe_backend(r)
         try:
-            ok = backend_for(r).available()
-        except BackendError:
+            ok = bool(b and b.available())
+        except Exception:
             ok = False
         status.append((r, ok))
     return render(request, "files/home.html", {"roots": status, "form": FileRootForm(), "all_roots": FileRoot.objects.all(), "logs": SyncLog.objects.select_related("root", "proposal", "user")[:10]})
@@ -42,13 +63,17 @@ def file_home(request):
 @login_required
 def browse(request, root_id, rel=""):
     root = get_object_or_404(FileRoot, pk=root_id, is_active=True)
-    try:
-        b = backend_for(root)
-        entries = b.listdir(rel)
-        error = ""
-    except BackendError as e:
-        entries, error = [], str(e)
-    return render(request, "files/browse.html", {"root": root, "rel": rel.strip("/"), "entries": entries, "crumbs": _crumbs(rel), "error": error, "parent": posixpath.dirname(rel.strip("/"))})
+    b, err = _safe_backend(root)
+    entries, problem = [], None
+    if err is None:
+        try:
+            entries = b.listdir(rel)
+        except Exception as e:
+            err = e
+    if err is not None:
+        problem = {**_classify(err), "detail": str(err)[:300]}
+        return render(request, "files/unreachable.html", {"root": root, "rel": rel.strip("/"), "problem": problem, "crumbs": _crumbs(rel)}, status=200)
+    return render(request, "files/browse.html", {"root": root, "rel": rel.strip("/"), "entries": entries, "crumbs": _crumbs(rel), "error": "", "parent": posixpath.dirname(rel.strip("/"))})
 
 
 @login_required
@@ -56,8 +81,9 @@ def download(request, root_id, rel):
     root = get_object_or_404(FileRoot, pk=root_id, is_active=True)
     try:
         f, name, size = backend_for(root).open(rel)
-    except BackendError as e:
-        raise Http404(str(e))
+    except Exception as e:
+        problem = {**_classify(e), "detail": str(e)[:300]}
+        return render(request, "files/unreachable.html", {"root": root, "rel": rel, "problem": problem, "crumbs": _crumbs(rel)})
     ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
     resp = FileResponse(f, content_type=ctype, as_attachment=request.GET.get("inline") != "1", filename=name)
     return resp
@@ -71,7 +97,10 @@ def upload(request, root_id):
     if not root.allow_upload:
         messages.error(request, "Uploads are disabled for this root.")
         return redirect("file_browse", root_id=root.pk, rel=rel)
-    b = backend_for(root)
+    b, err = _safe_backend(root)
+    if err is not None:
+        problem = {**_classify(err), "detail": str(err)[:300]}
+        return render(request, "files/unreachable.html", {"root": root, "rel": rel, "problem": problem, "crumbs": _crumbs(rel)})
     n = 0
     try:
         for f in request.FILES.getlist("files"):
@@ -80,8 +109,8 @@ def upload(request, root_id):
         if request.POST.get("folder"):
             b.mkdir(rel, request.POST["folder"])
             messages.success(request, f"Folder “{request.POST['folder']}” created.")
-    except BackendError as e:
-        messages.error(request, str(e))
+    except Exception as e:
+        messages.error(request, _classify(e)["title"] + ": " + str(e)[:200])
     if n:
         messages.success(request, f"Uploaded {n} file{'s' if n != 1 else ''}.")
     return redirect("file_browse", root_id=root.pk, rel=rel)
@@ -113,7 +142,9 @@ def sync_project(request, pk):
     log = SyncLog.objects.create(root=root, proposal=proposal, user=request.user)
     seen, created = 0, 0
     try:
-        b = backend_for(root)
+        b, err = _safe_backend(root)
+        if err is not None:
+            raise BackendError(str(err))
         existing = set(proposal.records.values_list("path", flat=True))
         for e in b.walk(rel):
             seen += 1
@@ -125,9 +156,10 @@ def sync_project(request, pk):
             ProjectRecord.objects.create(proposal=proposal, kind=kind, date=(e.modified or proposal.created_at).date(), title=e.name, path=path, created_by=request.user, notes=f"Indexed from {root.name}")
             created += 1
         log.message = f"OK: {seen} files seen, {created} records created from {rel}"
-    except BackendError as ex:
+    except Exception as ex:
+        c = _classify(ex)
         log.message = f"Failed: {ex}"
-        messages.error(request, str(ex))
+        messages.error(request, f"{c['title']}. {c['advice']}")
     log.files_seen, log.records_created = seen, created
     log.save()
     if created or seen:

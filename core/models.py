@@ -189,6 +189,7 @@ CAPABILITIES = [
     ("manage_forms", "Form builder: choose which inputs each form shows, add custom fields"),
     ("manage_integrations", "Timesheet / Notes / file-server connectors"),
     ("manage_users", "Create users and assign roles"),
+    ("view_all_offices", "See every office's figures (not only your own office)"),
 ]
 CAPABILITY_KEYS = [c[0] for c in CAPABILITIES]
 
@@ -238,7 +239,7 @@ class Theme(models.Model):
     based_on = models.CharField(max_length=30, blank=True, help_text="Preset key this theme was copied from.")
     variables = models.JSONField(default=dict, blank=True, help_text="Light-mode values.")
     dark_variables = models.JSONField(default=dict, blank=True, help_text="Dark-mode values (applied when the page is in dark mode).")
-    default_mode = models.CharField(max_length=5, choices=[("dark", "Dark"), ("light", "Light")], default="dark")
+    default_mode = models.CharField(max_length=5, choices=[("dark", "Dark"), ("light", "Light")], default="light")
     custom_css = models.TextField(blank=True, help_text="Extra CSS appended after the theme variables.")
     is_active = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -335,3 +336,53 @@ class CustomField(models.Model):
     def choice_list(self):
         return [c.strip() for c in self.choices.split(",") if c.strip()]
 
+
+
+# ---------------------------------------------------------------------------
+# Offices and industry news
+# ---------------------------------------------------------------------------
+class Office(models.Model):
+    code = models.CharField(max_length=20, unique=True, help_text="e.g. DSP-Toronto")
+    name = models.CharField(max_length=80)
+    city = models.CharField(max_length=80, blank=True)
+    country = models.CharField(max_length=60, blank=True)
+    latitude = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    timezone = models.CharField(max_length=60, blank=True, default="UTC")
+    is_hq = models.BooleanField(default=False)
+    notes = models.CharField(max_length=255, blank=True, help_text="Internal note shown to partners, e.g. hiring priorities.")
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "code"]
+
+    def __str__(self):
+        return self.code
+
+
+class NewsSource(models.Model):
+    name = models.CharField(max_length=100)
+    url = models.URLField(help_text="RSS or Atom feed URL.")
+    is_active = models.BooleanField(default=True)
+    last_fetched_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class NewsItem(models.Model):
+    source = models.ForeignKey(NewsSource, on_delete=models.CASCADE, related_name="items", null=True, blank=True)
+    title = models.CharField(max_length=300)
+    url = models.URLField(max_length=500)
+    summary = models.CharField(max_length=500, blank=True)
+    published_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-published_at"]
+        unique_together = [("url",)]
+
+    def __str__(self):
+        return self.title

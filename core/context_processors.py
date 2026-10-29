@@ -24,6 +24,6 @@ def company(request):
         "company": company, "caps": caps, "can": {c: True for c in caps}, "real_caps": real_caps,
         "is_privileged": bool(real_caps & {"manage_users", "manage_settings", "manage_forms", "manage_integrations"}) or getattr(user, "is_superuser", False),
         "view_as": view_as, "capability_labels": CAPABILITIES,
-        "theme_css": theme.css() if theme else "", "theme_mode": theme.default_mode if theme else "dark",
+        "theme_css": theme.css() if theme else "", "theme_mode": theme.default_mode if theme else "light",
         "config_roles": AccessRole.objects.all() if view_as or ("manage_users" in real_caps) else [],
     }

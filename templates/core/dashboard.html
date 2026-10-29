@@ -1,54 +1,36 @@
-{% extends "base.html" %}{% load humanize %}{% load bdsp %}
+{% extends "base.html" %}{% load bdsp %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <div class="page-head">
   <div><h1>Good {% now "H" as h %}{% if h < "12" %}morning{% elif h < "18" %}afternoon{% else %}evening{% endif %}, {{ user.first_name|default:user.username }}</h1>
-  <div class="sub">{% now "l, j F Y" %} · pipeline at a glance</div></div>
-  <div class="actions">{% if can.edit_proposals %}<a class="btn btn-primary" href="{% url 'proposal_create' %}">{% include "includes/icons.html" with name="plus" %} New proposal</a>{% endif %}<a class="btn" href="{% url 'proposal_board' %}">Board view</a></div>
+  <div class="sub">{% now "l, j F Y" %} · showing {{ scope.label }}{% if not scope.all_offices %} <span class="muted">(your office)</span>{% endif %}</div></div>
+  <div class="actions">{% if can.edit_proposals %}<a class="btn btn-primary" href="{% url 'proposal_create' %}">{% include "includes/icons.html" with name="plus" %} New proposal</a>{% endif %}
+    <button class="btn" type="button" onclick="document.getElementById('customize').showModal()">Customise</button></div>
+</div>
+<div class="widgets">
+{% for w in widgets %}
+  <section class="card widget cols-{{ w.cols }}" id="w-{{ w.key }}">
+    {% if w.ctx.error %}<div class="card-head"><h3>{{ w.title }}</h3></div><div class="card-body muted">This widget could not load: {{ w.ctx.error }}</div>
+    {% else %}{% with ctx=w.ctx %}{% include "core/widgets/"|add:w.key|add:".html" %}{% endwith %}{% endif %}
+  </section>
+{% empty %}<div class="card" style="grid-column:1/-1"><div class="empty"><strong>Nothing on your dashboard</strong>Choose widgets with “Customise”.</div></div>{% endfor %}
 </div>
 
-<div class="grid grid-4 mb">
-  <div class="card stat"><div class="k">Open pursuits</div><div class="v">{{ open_count }}</div><div class="d">lead → submitted</div></div>
-  <div class="card stat"><div class="k">Pipeline value</div><div class="v">{{ pipeline_value|money:base }}</div><div class="d">open fees, in {{ base.code }}</div></div>
-  <div class="card stat"><div class="k">Weighted pipeline</div><div class="v">{{ weighted_value|money:base }}</div><div class="d">fee × probability</div></div>
-  <div class="card stat"><div class="k">Win rate</div><div class="v">{% if win_rate is not None %}{{ win_rate }}%{% else %}—{% endif %}</div><div class="d">{{ won }} won · {{ lost }} lost</div></div>
-</div>
-
-<div class="pipeline mb" style="grid-template-columns:repeat(8,1fr)">
-  {% for s in pipeline %}<a href="{% url 'proposal_list' %}?status={{ s.key }}"><div class="n">{{ s.count }}</div><div class="l">{{ s.label }}</div></a>{% endfor %}
-</div>
-
-<div class="grid grid-3">
-  <div class="card span-2">
-    <div class="card-head"><h2>Recent proposals</h2><a class="btn btn-sm" href="{% url 'proposal_list' %}">All proposals</a></div>
-    {% if recent %}
-    <div class="table-wrap"><table class="tbl"><thead><tr><th>No.</th><th>Title</th><th>Client</th><th>Status</th><th class="num">Fee</th><th>Due</th></tr></thead><tbody>
-      {% for p in recent %}
-      <tr><td class="mono">{{ p.number }}</td><td><a class="strong" href="{% url 'proposal_detail' p.pk %}">{{ p.title }}</a><br><small>{{ p.get_service_type_display }}{% if p.owner %} · {{ p.owner.get_full_name|default:p.owner.username }}{% endif %}</small></td>
-      <td>{{ p.client|default:"—" }}</td><td>{% include "proposals/_status_badge.html" with proposal=p %}</td><td class="num">{{ p.fee_total|money:p.cur }}</td>
-      <td>{% if p.due_date %}<span class="{% if p.is_open and p.days_to_due < 0 %}due-bad{% elif p.is_open and p.days_to_due <= 7 %}due-warn{% endif %}">{{ p.due_date|date:"j M" }}</span>{% else %}—{% endif %}</td></tr>
-      {% endfor %}
-    </tbody></table></div>
-    {% else %}<div class="empty"><strong>No proposals yet</strong>Create your first pursuit to see it here.</div>{% endif %}
-  </div>
-  <div class="stack">
-    <div class="card">
-      <div class="card-head"><h3>Due in the next 30 days</h3></div>
-      {% if overdue or due_soon %}<table class="tbl"><tbody>
-        {% for p in overdue %}<tr><td><a href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:38 }}</a><br><small>{{ p.client|default:"" }}</small></td><td class="right due-bad">{{ p.days_to_due|cut:"-" }}d overdue</td></tr>{% endfor %}
-        {% for p in due_soon %}<tr><td><a href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:38 }}</a><br><small>{{ p.client|default:"" }}</small></td><td class="right {% if p.days_to_due <= 7 %}due-warn{% endif %}">{{ p.due_date|date:"j M" }}<br><small>{{ p.days_to_due }}d</small></td></tr>{% endfor %}
-      </tbody></table>{% else %}<div class="empty">Nothing due soon.</div>{% endif %}
-    </div>
-    {% if active_projects %}<div class="card">
-      <div class="card-head"><h3>Active projects</h3><span class="muted">estimate vs booked</span></div>
-      <table class="tbl"><tbody>{% for p in active_projects %}<tr><td><a href="{% url 'proposal_actuals' p.pk %}">{{ p.title|truncatechars:34 }}</a><br><small class="mono">{{ p.project_number|default:p.number }}</small></td><td class="right">{{ p.actual_hours|num:0 }} / {{ p.total_hours|num:0 }} h{% if p.hours_variance_pct is not None %}<br><small class="var-{{ p.hours_variance_pct|pct_class }}">{{ p.hours_variance_pct }}%</small>{% endif %}</td></tr>{% endfor %}</tbody></table>
-    </div>{% endif %}
-    <div class="card">
-      <div class="card-head"><h3>Upcoming milestones</h3><a class="btn btn-sm" href="{% url 'programme' %}">Programme</a></div>
-      {% if upcoming_milestones %}<table class="tbl"><tbody>
-        {% for t in upcoming_milestones %}<tr><td><span class="dot" style="background:{{ t.color }}"></span>{{ t.name }}<br><small><a href="{% url 'proposal_schedule' t.proposal.pk %}">{{ t.proposal.number }}</a> {{ t.proposal.title|truncatechars:30 }}</small></td><td class="right">{{ t.start|date:"j M" }}</td></tr>{% endfor %}
-      </tbody></table>{% else %}<div class="empty">No milestones scheduled.</div>{% endif %}
-    </div>
-  </div>
-</div>
+<dialog id="customize" class="cfg">
+  <form method="dialog" class="cfg-close"><button class="btn btn-icon btn-ghost" aria-label="Close">✕</button></form>
+  <h2>Customise your dashboard</h2><p class="muted">Tick what you want to see and drag the handles to reorder. Your choice is saved to your profile.</p>
+  <form method="post" action="{% url 'dashboard_customize' %}" id="cust-form">{% csrf_token %}<input type="hidden" name="order" id="cust-order">
+    <ul class="cust-list" id="cust-list">{% for w in available %}<li draggable="true" data-key="{{ w.key }}"><span class="handle" title="Drag to reorder">⋮⋮</span><label><input type="checkbox" name="widget" value="{{ w.key }}" {% if w.on %}checked{% endif %}> <strong>{{ w.title }}</strong><br><small class="muted">{{ w.description }}</small></label></li>{% endfor %}</ul>
+    <div class="form-actions"><button class="btn btn-primary">Save</button><button class="btn btn-ghost" name="reset" value="1">Reset to defaults for my roles</button></div>
+  </form>
+</dialog>
+<script>
+(function(){ var list=document.getElementById("cust-list"), form=document.getElementById("cust-form"); if(!list) return; var drag=null;
+  // put currently-on widgets first in their current order
+  var cur = {{ keys|safe }}; var items = Array.from(list.children); items.sort(function(a,b){ var ia=cur.indexOf(a.dataset.key), ib=cur.indexOf(b.dataset.key); if(ia<0) ia=99; if(ib<0) ib=99; return ia-ib; }); items.forEach(function(i){ list.appendChild(i); });
+  list.addEventListener("dragstart", function(e){ drag=e.target.closest("li"); e.dataTransfer.effectAllowed="move"; });
+  list.addEventListener("dragover", function(e){ e.preventDefault(); var li=e.target.closest("li"); if(!li||li===drag) return; var r=li.getBoundingClientRect(); (e.clientY-r.top > r.height/2) ? li.after(drag) : li.before(drag); });
+  form.addEventListener("submit", function(){ document.getElementById("cust-order").value = Array.from(list.children).map(function(li){ return li.dataset.key; }).join(","); });
+})();
+</script>
 {% endblock %}

@@ -59,6 +59,7 @@ class Employee(models.Model):
     name = models.CharField(max_length=120)
     initials = models.CharField(max_length=6, blank=True)
     role = models.ForeignKey(StaffRole, on_delete=models.PROTECT, related_name="employees")
+    office = models.ForeignKey("core.Office", on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
     rate = models.DecimalField(max_digits=8, decimal_places=2, help_text="Billing rate per hour, base currency.")
     cost_rate = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True,
@@ -161,6 +162,7 @@ class Proposal(Taggable):
         help_text="Senior associate leading this pursuit.",
     )
     template = models.ForeignKey(ProposalTemplate, on_delete=models.SET_NULL, null=True, blank=True)
+    office = models.ForeignKey("core.Office", on_delete=models.SET_NULL, null=True, blank=True, related_name="proposals", help_text="Office leading the pursuit; defaults to the owner's office.")
     services = models.ManyToManyField(Service, blank=True, related_name="proposals")
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, null=True, blank=True, related_name="proposals")
     location = models.CharField(max_length=200, blank=True)
@@ -263,6 +265,10 @@ class Proposal(Taggable):
             self.number = self.next_number()
         if not self.currency_id:
             self.currency = CompanyProfile.get_solo().base_currency
+        if not self.office_id and self.owner_id:
+            prof = getattr(self.owner, "profile", None)
+            if prof and prof.office_id:
+                self.office = prof.office
         self.project_number = self.compute_project_number()
         if self.status == self.Status.WON and self.phase == self.Phase.B and self.sequence is not None:
             self.phase = self.Phase.C

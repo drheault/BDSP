@@ -78,3 +78,37 @@ class SeedAndCoreTests(TestCase):
         self.assertEqual(CompanyProfile.get_solo().default_currency, eur)
         self.assertEqual(eur.format(1234.5), "€1,235")
         self.assertEqual(eur.format(-20, 2), "-€20.00")
+
+
+    def test_dashboard_widgets_scoping_and_customise(self):
+        from community.models import Profile
+        from core.models import AccessRole, Office
+        from proposals.models import Proposal
+
+        tor = Office.objects.create(code="DSP-Toronto", name="Toronto")
+        lon = Office.objects.create(code="DSP-London", name="London")
+        U = get_user_model()
+        partner = U.objects.create_user("pt", password="p")
+        AccessRole.objects.create(name="Partners", capabilities=["view_proposals", "view_all_offices", "view_actuals"]).users.add(partner)
+        local = U.objects.create_user("lc", password="p")
+        AccessRole.objects.create(name="Associates", capabilities=["view_proposals"]).users.add(local)
+        Profile.objects.create(user=local, office=tor)
+        Proposal.objects.create(title="Toronto job", office=tor)
+        Proposal.objects.create(title="London job", office=lon)
+        self.client.force_login(partner)
+        r = self.client.get(reverse("dashboard"))
+        self.assertContains(r, "London job")
+        self.assertContains(r, "Offices")
+        self.client.force_login(local)
+        r = self.client.get(reverse("dashboard"))
+        self.assertContains(r, "Toronto job")
+        self.assertNotContains(r, "London job")
+        self.assertNotContains(r, 'id="w-offices"')
+        r = self.client.post(reverse("dashboard_customize"), {"widget": ["weather", "top_tools"], "order": "top_tools,weather"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(Profile.objects.get(user=local).dashboard, ["top_tools", "weather"])
+        r = self.client.get(reverse("dashboard"))
+        self.assertContains(r, 'id="w-top_tools"')
+        self.assertNotContains(r, 'id="w-pipeline"')
+        self.client.post(reverse("dashboard_customize"), {"reset": "1"})
+        self.assertEqual(Profile.objects.get(user=local).dashboard, [])

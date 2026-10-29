@@ -34,5 +34,9 @@ urlpatterns = [
     path("settings/appearance/<int:pk>/delete/", views.theme_delete, name="theme_delete"),
     path("settings/appearance/<int:pk>/export/", views.theme_export, name="theme_export"),
     path("view-as/", views.view_as, name="view_as"),
+    path("dashboard/customize/", views.dashboard_customize, name="dashboard_customize"),
+    path("settings/offices/", views.offices, name="offices"),
+    path("settings/offices/<int:pk>/delete/", views.office_delete, name="office_delete"),
+    path("settings/news/", views.news_source_save, name="news_source_save"),
     path("metrics/", views.metrics, name="metrics"),
 ]

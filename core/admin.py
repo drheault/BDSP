@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AccessRole, CompanyProfile, CustomField, Currency, FieldRule, Region, Theme
+from .models import AccessRole, CompanyProfile, CustomField, Currency, FieldRule, NewsItem, NewsSource, Office, Region, Theme
 
 
 @admin.register(CompanyProfile)
@@ -42,3 +42,11 @@ class FieldRuleAdmin(admin.ModelAdmin):
 class CustomFieldAdmin(admin.ModelAdmin):
     list_display = ("form_key", "key", "label", "type", "required", "is_active")
     list_filter = ("form_key",)
+
+
+@admin.register(Office)
+class OfficeAdmin(admin.ModelAdmin):
+    list_display = ("code", "name", "city", "country", "is_hq", "is_active")
+
+
+admin.site.register([NewsSource, NewsItem])

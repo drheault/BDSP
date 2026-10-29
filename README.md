@@ -8,12 +8,21 @@ and showcase past projects.
 ## Quick start
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed --demo     # defaults + sample data; creates admin / admin
 python manage.py runserver
 ```
+
+Everything in `requirements.txt` is pure Python and installs on macOS, Windows
+and Linux without system packages. The Gantt image inside **Word** exports needs
+the optional `rlPyCairo` (see `requirements-optional.txt`); without it the Word
+file still contains the schedule table, and the PDF export is unaffected.
+
+If `pip install` stopped part-way (for example on an optional package), run it
+again before `migrate`; a half-finished install is why `manage.py` cannot find
+Django.
 
 Open http://127.0.0.1:8000, sign in as `admin` / `admin` (change this in
 `/admin/`), then go to **Company settings** to upload the logo, pick the default
@@ -39,7 +48,8 @@ the production variables.
 
 | Area | What you can do |
 | --- | --- |
-| **Dashboard** | Open pursuits, pipeline and weighted value, win rate, due dates, upcoming milestones |
+| **Dashboard** | Personal and office-scoped: widgets chosen by role (partners see every office, office breakdown, hours booked, news; engineers see tools, saved calculations, mentors) and customisable per person. Weather, news feeds, quick links |
+| **Offices** | DSP-Salzburg (HQ), London, Washington, Toronto, Tel Aviv seeded; people, employees and proposals belong to an office; `view_all_offices` lifts the scope |
 | **Proposals** | Create from a template, edit sections inline (add / remove / reorder), placeholders such as `{{client_name}}`, status pipeline (lead → won/lost), list and Kanban board views, duplicate, delete |
 | **Fee estimate** | Work-breakdown items (drawings, reports, design tasks, meetings…) each holding granular lines: named employee or role × hours × rate, expenses, software licences, subconsultants, travel with markup. Roll-ups by item, cost type and person; contingency; manual override; weighted value |
 | **Currencies** | Price each proposal in CAD, USD, EUR, ILS… (add any). Rate card is in the base currency and converts automatically; dashboard totals convert back to base |
@@ -154,6 +164,15 @@ Environment variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG` (`1`/`0`),
 ```bash
 python manage.py test
 ```
+
+## Dashboard widgets
+
+`core/widgets.py` is the registry: each widget declares its default roles, a
+capability guard, its width and a build function. Office scoping comes from
+the user's profile; partners (or anyone with `view_all_offices`) see all
+offices. News comes from RSS/Atom feeds under *Offices & news*; schedule
+`python manage.py fetch_news` hourly on the office network. Weather is fetched
+in the browser from Open-Meteo using the office coordinates.
 
 ## Public site
 

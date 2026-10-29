@@ -12,7 +12,7 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import AccessRole, CompanyProfile, Currency, Region
+from core.models import AccessRole, CompanyProfile, Currency, NewsItem, NewsSource, Office, Region
 from crm.models import Client, Contact
 from projects.models import PastProject, ProjectImage
 from proposals.models import (
@@ -31,6 +31,21 @@ from tags.models import Tag, TagCategory
 from community.models import Profile, Skill, UserSkill
 from files.models import FileRoot
 from calcs.views import ensure_builtins
+
+OFFICES = [
+    # code, name, city, country, lat, lon, tz, hq, note
+    ("DSP-Salzburg", "Salzburg (main office)", "Salzburg", "Austria", 47.8095, 13.0550, "Europe/Vienna", True, "Headquarters and partner location."),
+    ("DSP-London", "London", "London", "United Kingdom", 51.5074, -0.1278, "Europe/London", False, "Largest office."),
+    ("DSP-Washington", "Washington D.C.", "Washington", "USA", 38.9072, -77.0369, "America/New_York", False, ""),
+    ("DSP-Toronto", "Toronto", "Toronto", "Canada", 43.6532, -79.3832, "America/Toronto", False, "Heavy workload: invest in local staff and senior support hiring."),
+    ("DSP-TelAviv", "Tel Aviv", "Tel Aviv", "Israel", 32.0853, 34.7818, "Asia/Jerusalem", False, ""),
+]
+
+NEWS_SOURCES = [
+    ("Tunnelling Journal", "https://tunnellingjournal.com/feed/"),
+    ("Tunnels & Tunnelling", "https://www.tunnelsandtunnelling.com/feed/"),
+    ("New Civil Engineer – Tunnelling", "https://www.newcivilengineer.com/tunnelling/feed/"),
+]
 
 TAGS = {
     # category: (weight, color, [tags])
@@ -268,6 +283,11 @@ class Command(BaseCommand):
                 Tag.objects.get_or_create(name=n, category=c)
         for name, cat in SKILLS:
             Skill.objects.get_or_create(name=name, defaults={"category": cat})
+        for i, (code, name, city, country, lat, lon, tz_, hq, note) in enumerate(OFFICES):
+            Office.objects.get_or_create(code=code, defaults={"name": name, "city": city, "country": country, "latitude": lat, "longitude": lon, "timezone": tz_, "is_hq": hq, "notes": note, "order": i})
+        for name, url in NEWS_SOURCES:
+            NewsSource.objects.get_or_create(url=url, defaults={"name": name})
+        self.stdout.write(f"Offices: {Office.objects.count()}, news sources: {NewsSource.objects.count()}")
         ensure_builtins()
         for name, purpose, phases, path, tpl, order in (
             ("Projects (dc120)", "projects", "CDE", r"\\dc120\projects", "{country}/{project_number}", 0),
@@ -299,8 +319,9 @@ class Command(BaseCommand):
         for i, (title, rate) in enumerate(ROLES):
             StaffRole.objects.get_or_create(title=title, defaults={"default_rate": rate, "sort_order": i})
         roles = {r.title: r for r in StaffRole.objects.all()}
-        for name, role, rate, cost in EMPLOYEES:
-            Employee.objects.get_or_create(name=name, defaults={"role": roles[role], "rate": rate, "cost_rate": cost})
+        office_cycle = ["DSP-Toronto", "DSP-Toronto", "DSP-London", "DSP-Toronto", "DSP-Salzburg", "DSP-London", "DSP-Toronto", "DSP-Toronto", "DSP-Washington", "DSP-Toronto", "DSP-London"]
+        for i, (name, role, rate, cost) in enumerate(EMPLOYEES):
+            Employee.objects.get_or_create(name=name, defaults={"role": roles[role], "rate": rate, "cost_rate": cost, "office": Office.objects.filter(code=office_cycle[i % len(office_cycle)]).first()})
         self.stdout.write(f"Services: {Service.objects.count()}, roles: {StaffRole.objects.count()}, employees: {Employee.objects.count()}")
 
         for name, stype, desc, sections in (DESIGN_TEMPLATE, CONSTRUCTION_TEMPLATE, STUDY_TEMPLATE):
@@ -338,12 +359,14 @@ class Command(BaseCommand):
             eng.save()
         AccessRole.objects.get(name="Engineers").users.add(eng)
         on, bc, ny = Region.objects.get(code="ON"), Region.objects.get(code="BC"), Region.objects.get(code="NY")
+        tor, lon_, slz = Office.objects.get(code="DSP-Toronto"), Office.objects.get(code="DSP-London"), Office.objects.get(code="DSP-Salzburg")
+        AccessRole.objects.get(name="Partners").capabilities = AccessRole.objects.get(name="Partners").capabilities  # noqa
         for u, title, office, have, learning in (
             (lead1, "Partner", "Toronto", [("SEM / NATM design", 5), ("Cavern design", 5), ("Proposal writing", 5), ("Client relations", 5), ("Mentoring", 4)], []),
             (lead2, "Senior Associate", "Toronto", [("Segmental lining design", 4), ("Fee estimating", 4), ("Numerical modelling (FE/FD)", 4), ("Plaxis", 4), ("Project management", 4)], ["Cavern design"]),
             (eng, "Engineer", "Toronto", [("Numerical modelling (FE/FD)", 2), ("Plaxis", 3), ("Settlement & building damage assessment", 2)], ["SEM / NATM design", "Fee estimating", "Face stability"]),
         ):
-            Profile.objects.update_or_create(user=u, defaults={"title": title, "office": office})
+            Profile.objects.update_or_create(user=u, defaults={"title": title, "office": tor})
             for name, lvl in have:
                 UserSkill.objects.update_or_create(user=u, skill=Skill.objects.get(name=name), defaults={"self_level": lvl, "is_learning": False})
             for name in learning:
@@ -523,6 +546,17 @@ class Command(BaseCommand):
             img = _placeholder_image(name, color)
             if img:
                 ProjectImage.objects.create(project=pr, image=img, caption=f"{name} — placeholder image", order=0)
+        # offices on proposals (owner's office), and a London pursuit for the office breakdown
+        for pr_ in Proposal.objects.all():
+            if not pr_.office_id:
+                pr_.office = tor
+                pr_.save(update_fields=["office"])
+        Proposal.objects.create(title="Thames Tideway East – Secondary Lining Peer Review", client=transit, service_type="other", owner=lead2, status="submitted", due_date=today - timedelta(days=3), probability=55, manual_value=120000, currency=Currency.objects.get(code="GBP"), office=lon_, region=Region.objects.get(code="GBR"))
+        for i, (title, src) in enumerate([
+            ("TBM breakthrough completes twin-bore drive beneath city centre", "Tunnelling Journal"), ("Fibre-reinforced segmental linings: lessons from three recent metro projects", "Tunnels & Tunnelling"),
+            ("Ground freezing adopted for cross-passages on harbour crossing", "Tunnelling Journal"), ("NCE Tunnelling Festival shortlist announced", "New Civil Engineer – Tunnelling"),
+        ]):
+            NewsItem.objects.get_or_create(url=f"https://example.com/news/{i+1}", defaults={"title": title, "summary": "Example item — real items arrive from the configured feeds once fetch_news runs on the office network.", "published_at": timezone.now() - timedelta(days=i * 3), "source": NewsSource.objects.filter(name=src).first()})
         # attach the two most relevant sheets to the live design pursuit
         from proposals.models import ProposalAttachment
 

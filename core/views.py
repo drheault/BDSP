@@ -24,41 +24,29 @@ ZERO = Decimal(0)
 
 @login_required
 def dashboard(request):
-    today = timezone.localdate()
-    company = CompanyProfile.get_solo()
-    base = company.base_currency
-    proposals = Proposal.objects.select_related("client", "owner", "currency")
-    open_qs = proposals.filter(status__in=Proposal.OPEN_STATUSES)
+    from .widgets import REGISTRY, widgets_for
 
-    status_counts = {row["status"]: row["n"] for row in proposals.values("status").annotate(n=Count("id"))}
-    pipeline = [{"key": key, "label": label, "count": status_counts.get(key, 0)} for key, label in Proposal.Status.choices]
+    widgets, scope, keys = widgets_for(request)
+    available = [{**w, "on": w["key"] in keys} for w in REGISTRY.values() if not w["cap"] or w["cap"] in scope.caps or request.user.is_superuser]
+    return render(request, "core/dashboard.html", {"widgets": widgets, "scope": scope, "available": available, "keys": keys})
 
-    open_list = list(open_qs)
-    pipeline_value = sum((p.fee_total_base for p in open_list), ZERO)
-    weighted_value = sum((p.weighted_value_base for p in open_list), ZERO)
 
-    won = status_counts.get("won", 0)
-    lost = status_counts.get("lost", 0)
-    win_rate = round(100 * won / (won + lost)) if (won + lost) else None
+@login_required
+@require_POST
+def dashboard_customize(request):
+    """Save the user's widget selection and order (or reset to role defaults)."""
+    from community.models import Profile
 
-    due_soon = open_qs.filter(due_date__gte=today, due_date__lte=today + timedelta(days=30)).order_by("due_date")
-    overdue = open_qs.filter(due_date__lt=today).order_by("due_date")
-    recent = proposals[:6]
-    upcoming_milestones = (
-        Task.objects.filter(is_milestone=True, start__gte=today, proposal__status__in=Proposal.OPEN_STATUSES)
-        .select_related("proposal").order_by("start")[:6]
-    )
-    active_projects = proposals.filter(status="won").exclude(project_status="complete")[:5]
-
-    return render(
-        request, "core/dashboard.html",
-        {
-            "base": base, "pipeline": pipeline, "open_count": len(open_list), "pipeline_value": pipeline_value,
-            "weighted_value": weighted_value, "win_rate": win_rate, "won": won, "lost": lost,
-            "due_soon": due_soon, "overdue": overdue, "recent": recent, "upcoming_milestones": upcoming_milestones,
-            "active_projects": active_projects,
-        },
-    )
+    prof, _ = Profile.objects.get_or_create(user=request.user)
+    if request.POST.get("reset"):
+        prof.dashboard = []
+    else:
+        ordered = [k for k in request.POST.get("order", "").split(",") if k]
+        chosen = set(request.POST.getlist("widget"))
+        prof.dashboard = [k for k in ordered if k in chosen] + [k for k in chosen if k not in ordered]
+    prof.save()
+    messages.success(request, "Dashboard updated.")
+    return redirect("dashboard")
 
 
 @login_required
@@ -472,9 +460,9 @@ def form_builder_reset(request, form_key):
 def landing(request):
     if request.user.is_authenticated:
         return dashboard(request)
-    from proposals.models import Service
+    from .models import Office
 
-    return render(request, "core/landing.html", {"services": Service.objects.filter(is_active=True)[:9]})
+    return render(request, "core/landing.html", {"offices": Office.objects.filter(is_active=True)})
 
 
 @login_required
@@ -492,3 +480,55 @@ def view_as(request):
     else:
         request.session.pop("view_as_role", None)
     return redirect(request.POST.get("next") or "/")
+
+
+# ---- offices & news sources ------------------------------------------------------
+@login_required
+@require_cap("manage_settings")
+def offices(request):
+    from .forms import OfficeForm
+    from .models import NewsSource, Office
+
+    if request.method == "POST":
+        inst = Office.objects.filter(pk=request.POST.get("pk")).first() if request.POST.get("pk") else None
+        form = OfficeForm(request.POST, instance=inst)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Office saved.")
+            return redirect("offices")
+        messages.error(request, form.errors.as_text())
+    return render(request, "core/offices.html", {"offices": Office.objects.all(), "form": OfficeForm(), "sources": NewsSource.objects.all()})
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def office_delete(request, pk):
+    from .models import Office
+
+    o = get_object_or_404(Office, pk=pk)
+    if o.people.exists() or o.proposals.exists() or o.employees.exists():
+        o.is_active = False
+        o.save()
+    else:
+        o.delete()
+    return redirect("offices")
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def news_source_save(request):
+    from .models import NewsSource
+
+    name, url = request.POST.get("name", "").strip(), request.POST.get("url", "").strip()
+    if request.POST.get("delete"):
+        NewsSource.objects.filter(pk=request.POST["delete"]).delete()
+    elif name and url:
+        NewsSource.objects.get_or_create(url=url, defaults={"name": name})
+    if request.POST.get("fetch"):
+        from .news import fetch_all
+
+        res = fetch_all()
+        messages.info(request, f"Fetched {res['items']} items from {res['ok']} feed(s); {res['failed']} failed.")
+    return redirect("offices")

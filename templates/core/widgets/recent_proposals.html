@@ -1,0 +1,4 @@
+{% load bdsp %}<div class="card-head"><h3>Recent proposals</h3><a class="btn btn-sm" href="{% url 'proposal_list' %}">All proposals</a></div>
+<div class="table-wrap"><table class="tbl"><thead><tr><th>No.</th><th>Title</th><th>Status</th><th class="num">Fee</th><th>Due</th></tr></thead><tbody>
+{% for p in ctx.items %}<tr><td class="mono">{{ p.project_number|default:p.number }}</td><td><a class="strong" href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:48 }}</a><br><small>{{ p.client|default:"—" }}{% if p.office %} · {{ p.office.code }}{% endif %}</small></td><td>{% include "proposals/_status_badge.html" with proposal=p %}</td><td class="num">{{ p.fee_total|money:p.cur }}</td><td>{{ p.due_date|date:"j M"|default:"—" }}</td></tr>
+{% empty %}<tr><td colspan="5" class="muted">No proposals yet.</td></tr>{% endfor %}</tbody></table></div>

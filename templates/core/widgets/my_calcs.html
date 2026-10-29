@@ -1,0 +1,2 @@
+<div class="card-head"><h3>My saved calculations</h3></div>
+<table class="tbl"><tbody>{% for r in ctx.items %}<tr><td><a href="{% url 'run_detail' r.pk %}">{{ r.title }}</a><br><small class="muted">{{ r.tool.name }}{% if r.proposal %} · {{ r.proposal.number }}{% endif %}</small></td></tr>{% empty %}<tr><td class="muted">Save a calculation from any tool and it shows here.</td></tr>{% endfor %}</tbody></table>

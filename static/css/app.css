@@ -440,3 +440,17 @@ html[data-editmode="off"] .cfg-btn, html[data-editmode="off"] dialog.cfg .menu {
 html[data-costs="hide"] .cost-col { display: none !important; }
 html[data-density="compact"] { --font-size: 14px; } html[data-density="compact"] .tbl td { padding: .4rem .6rem; } html[data-density="compact"] .card-body { padding: .75rem .9rem; } html[data-density="compact"] .main { padding: 1rem 1.2rem 2rem; }
 html[data-ids="show"] [data-id]::after { content: " #" attr(data-id); font-family: var(--mono); font-size: .72rem; color: var(--ink-3); }
+
+/* ---- dashboard widgets ---------------------------------------------------- */
+.widgets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.1rem; align-items: start; }
+.widget.cols-2 { grid-column: span 2; } .widget.cols-3 { grid-column: span 3; }
+.widget .stat { padding: .4rem .2rem; }
+@media (max-width: 1100px) { .widgets { grid-template-columns: repeat(2, 1fr); } .widget.cols-3 { grid-column: span 2; } }
+@media (max-width: 800px) { .widgets { grid-template-columns: 1fr; } .widget.cols-2, .widget.cols-3 { grid-column: span 1; } }
+.cust-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .4rem; max-height: 55vh; overflow: auto; }
+.cust-list li { display: flex; gap: .7rem; align-items: flex-start; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); }
+.cust-list .handle { cursor: grab; color: var(--ink-3); user-select: none; padding-top: .1rem; }
+.cust-list label { display: flex; gap: .5rem; align-items: flex-start; cursor: pointer; }
+
+.unreach-icon { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; background: var(--warn-100); color: #8a6900; }
+.unreach-icon svg { width: 32px; height: 32px; } .unreach-icon.auth { background: var(--bad-100); color: var(--bad); } .unreach-icon.missing, .unreach-icon.other { background: var(--info-100); color: var(--navy); }

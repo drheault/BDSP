@@ -1,0 +1,2 @@
+<div class="card-head"><h3>Mentors for you</h3><a class="btn btn-sm" href="{% url 'people' %}">People</a></div>
+<table class="tbl"><tbody>{% for s in ctx.items %}<tr><td><strong>{{ s.skill }}</strong><br>{% for m in s.mentors %}<a href="{% url 'person' m.user.pk %}">{{ m.user.get_full_name|default:m.user.username }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>{% empty %}<tr><td class="muted">Mark a skill as “learning” on your profile to get suggestions.</td></tr>{% endfor %}</tbody></table>

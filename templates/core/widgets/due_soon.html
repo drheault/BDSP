@@ -1,0 +1,5 @@
+<div class="card-head"><h3>Due in the next 30 days</h3></div>
+{% if ctx.overdue or ctx.due_soon %}<table class="tbl"><tbody>
+{% for p in ctx.overdue %}<tr><td><a href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:38 }}</a><br><small>{{ p.client|default:"" }}</small></td><td class="right due-bad">{{ p.days_to_due|cut:"-" }}d overdue</td></tr>{% endfor %}
+{% for p in ctx.due_soon %}<tr><td><a href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:38 }}</a><br><small>{{ p.client|default:"" }}</small></td><td class="right {% if p.days_to_due <= 7 %}due-warn{% endif %}">{{ p.due_date|date:"j M" }}<br><small>{{ p.days_to_due }}d</small></td></tr>{% endfor %}
+</tbody></table>{% else %}<div class="empty">Nothing due soon.</div>{% endif %}

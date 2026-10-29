@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Offices & news{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Offices &amp; news</h1><div class="sub">Offices scope what people see; coordinates power the weather widget. News feeds fill the industry-news widget.</div></div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-head"><h3>Offices</h3></div>
+      <table class="tbl"><thead><tr><th>Code</th><th>Name / city</th><th>Coordinates</th><th>Note</th><th></th></tr></thead><tbody>
+      {% for o in offices %}<tr {% if not o.is_active %}style="opacity:.5"{% endif %}><td><strong>{{ o.code }}</strong>{% if o.is_hq %} <span class="badge">HQ</span>{% endif %}</td><td>{{ o.name }}<br><small class="muted">{{ o.city }}{% if o.country %}, {{ o.country }}{% endif %} · {{ o.timezone }}</small></td><td class="mono"><small>{{ o.latitude|default:"—" }}, {{ o.longitude|default:"—" }}</small></td><td><small class="muted">{{ o.notes }}</small></td>
+        <td class="row-actions"><details class="menu"><summary class="btn btn-xs btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><form method="post" action="{% url 'office_delete' o.pk %}" data-confirm="Remove {{ o.code }}? Offices in use are deactivated instead.">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Remove</button></form></div></details></td></tr>{% endfor %}
+      </tbody></table></div>
+    <div class="card"><div class="card-head"><h3>News feeds</h3><form method="post" action="{% url 'news_source_save' %}">{% csrf_token %}<button class="btn btn-sm" name="fetch" value="1">Fetch now</button></form></div>
+      <table class="tbl"><tbody>{% for s in sources %}<tr><td><strong>{{ s.name }}</strong><br><small class="mono">{{ s.url }}</small>{% if s.last_error %}<br><small class="due-bad">{{ s.last_error }}</small>{% elif s.last_fetched_at %}<br><small class="muted">fetched {{ s.last_fetched_at|date:"j M H:i" }}</small>{% endif %}</td><td class="row-actions"><form method="post" action="{% url 'news_source_save' %}">{% csrf_token %}<button class="btn btn-xs btn-danger" name="delete" value="{{ s.pk }}">×</button></form></td></tr>{% empty %}<tr><td class="muted">No feeds yet.</td></tr>{% endfor %}</tbody></table>
+      <div class="add-bar"><form method="post" action="{% url 'news_source_save' %}" class="inline-form">{% csrf_token %}<div class="field"><label>Name</label><input type="text" name="name" required></div><div class="field" style="flex:2"><label>Feed URL</label><input type="url" name="url" required placeholder="https://…/feed"></div><button class="btn btn-sm btn-primary">Add feed</button></form><div class="help">Fetching runs on the office network: schedule <code>python manage.py fetch_news</code> hourly.</div></div></div>
+  </div>
+  <div class="card"><div class="card-body"><h3>Add or edit an office</h3><form method="post" class="stack">{% csrf_token %}{% include "includes/form.html" with full_fields=",notes," %}<button class="btn btn-primary">Save office</button></form></div></div>
+</div>
+{% endblock %}

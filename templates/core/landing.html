@@ -2,57 +2,51 @@
 {% block title %}TunnelVision{% endblock %}
 {% block body %}
 <div class="landing">
-  <header class="l-nav"><a class="l-brand" href="/"><img src="{% if company and company.logo %}{{ company.logo.url }}{% else %}{% static 'img/logo-drsauer.png' %}{% endif %}" alt="{{ company.name }}"></a><nav><a href="#how">How it works</a><a href="#services">Services</a><a class="btn btn-accent" href="{% url 'login' %}">Sign in</a></nav></header>
+  <header class="l-nav"><a class="l-brand" href="/"><img src="{% if company and company.logo %}{{ company.logo.url }}{% else %}{% static 'img/logo-drsauer.png' %}{% endif %}" alt="{{ company.name }}"></a><nav><a href="#how">What's inside</a><a href="#offices">Offices</a><a class="btn btn-accent" href="{% url 'login' %}">Sign in</a></nav></header>
 
   <section class="l-hero">
     <div class="l-copy">
-      <div class="l-kicker">TunnelVision</div>
-      <h1>Proposals, estimates and schedules for people who build underground.</h1>
-      <p>Business development, fee build-ups, project sheets, timesheet actuals and the engineering tools behind them. Tunnels, shafts and caverns, from the first lead to the record drawings.</p>
-      <div class="row-flex"><a class="btn btn-accent" href="{% url 'login' %}" style="font-size:1rem;padding:.75rem 1.3rem">Sign in</a><a class="l-link" href="#how">See how it works →</a></div>
+      <div class="l-kicker">TunnelVision · internal</div>
+      <h1>Our proposals, estimates and schedules, in one place.</h1>
+      <p>Pursuits from the first call to close-out, fee build-ups by person and task, project sheets, timesheet actuals, and calculation tools with the method shown. Each office sees its own numbers; partners see them all.</p>
+      <div class="row-flex"><a class="btn btn-accent" href="{% url 'login' %}" style="font-size:1rem;padding:.75rem 1.3rem">Sign in</a><a class="l-link" href="#how">What's inside →</a></div>
     </div>
-    <figure class="l-tunnel" aria-label="Sequential excavation tunnel cross-section, top heading, bench and invert, with lattice girders and shotcrete lining">
-      <!-- Scale: 1 unit = 1 cm. Horseshoe profile ≈ 11.6 m wide × 9.8 m high (three-centred: crown R 5.8 m, haunches R 2.9 m, invert R 12 m). -->
-      <svg viewBox="-760 -560 1520 1180" preserveAspectRatio="xMidYMid meet">
+    <figure class="l-tunnel" aria-label="SEM tunnel cross-section at top-heading stage: three-centred horseshoe profile, lattice girders, rock bolts and shotcrete lining in three layers">
+      <!-- 1 unit = 1 cm. Crown R 5.6 m (centre 0,-40) and sidewalls R 7.6 m (centres ±200,-40) are tangent at the springline; the invert arch R 15 m joins at the knees. 11.2 m wide at the springline, 9.8 m high. -->
+      <svg viewBox="-760 -800 1520 1340" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <clipPath id="profile"><path d="M-580 160 A580 580 0 0 1 580 160 L580 300 A1200 1200 0 0 1 -580 300 Z"/></clipPath>
-          <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d0f12"/><stop offset="1" stop-color="#05060a"/></linearGradient>
-          <pattern id="hatch" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="22" stroke="#1b1f25" stroke-width="1"/></pattern>
+          <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c0e11"/><stop offset="1" stop-color="#050609"/></linearGradient>
+          <pattern id="hatch" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="22" stroke="#1a1e24" stroke-width="1"/></pattern>
+          <path id="prof" d="M-480 300 A760 760 0 0 1 -560 -40 A560 560 0 0 1 560 -40 A760 760 0 0 1 480 300" pathLength="1000"/>
+          <path id="inner" d="M-463 300 A745 745 0 0 1 -545 -40 A545 545 0 0 1 545 -40 A745 745 0 0 1 463 300" pathLength="1000"/>
+          <path id="inv" d="M480 300 A1500 1500 0 0 1 -480 300" pathLength="1000"/>
         </defs>
-        <rect x="-760" y="-560" width="1520" height="1180" fill="url(#rock)"/>
-        <rect x="-760" y="-560" width="1520" height="1180" fill="url(#hatch)" opacity=".8"/>
-        <!-- ground surface -->
-        <line x1="-760" y1="-500" x2="760" y2="-500" stroke="#2a2f36" stroke-width="2"/>
-        <text x="-740" y="-512" class="l-dim">ground level</text>
-        <!-- excavated void -->
-        <path d="M-580 160 A580 580 0 0 1 580 160 L580 300 A1200 1200 0 0 1 -580 300 Z" fill="#000"/>
-        <!-- muck pile / bench line -->
-        <line x1="-580" y1="160" x2="580" y2="160" stroke="#262b31" stroke-dasharray="8 10" stroke-width="1.5"/>
-        <text x="600" y="166" class="l-dim">bench</text>
-        <!-- shotcrete layers (grow in sequence) -->
-        <g clip-path="url(#profile)" fill="none" stroke-linecap="round">
-          <path class="sc sc1" d="M-580 160 A580 580 0 0 1 580 160" stroke="#3a3f46" stroke-width="30"/>
-          <path class="sc sc2" d="M-580 160 A580 580 0 0 1 580 160" stroke="#4b5159" stroke-width="22"/>
-          <path class="sc sc3" d="M-580 160 A580 580 0 0 1 580 160" stroke="#5a606a" stroke-width="12"/>
+        <rect x="-760" y="-800" width="1520" height="1340" fill="url(#rock)"/><rect x="-760" y="-800" width="1520" height="1340" fill="url(#hatch)" opacity=".85"/>
+        <line x1="-760" y1="-740" x2="760" y2="-740" stroke="#262b31" stroke-width="2"/><text x="-740" y="-752" class="l-dim">ground level</text>
+        <!-- excavated top heading -->
+        <path d="M-480 300 A760 760 0 0 1 -560 -40 A560 560 0 0 1 560 -40 A760 760 0 0 1 480 300 Z" fill="#000"/>
+        <!-- bench and invert still to excavate: outline only -->
+        <path d="M-480 300 A1500 1500 0 0 0 480 300" fill="#0b0d10" stroke="#262b31" stroke-width="1.5" stroke-dasharray="10 10"/>
+        <line x1="-560" y1="160" x2="560" y2="160" stroke="#262b31" stroke-dasharray="8 10" stroke-width="1.5"/><text x="580" y="166" class="l-dim">bench</text>
+        <!-- lining: three shotcrete layers over crown and sidewalls -->
+        <g fill="none" stroke-linecap="butt">
+          <use href="#prof" class="sc sc1" stroke="#3a3f46" stroke-width="30"/>
+          <use href="#prof" class="sc sc2" stroke="#4b5159" stroke-width="20"/>
+          <use href="#prof" class="sc sc3" stroke="#5c626b" stroke-width="10"/>
         </g>
-        <!-- lattice girders every 1.2 m: shown as the visible girder at the face plus the previous one in dashed outline -->
-        <path d="M-556 160 A556 556 0 0 1 556 160" fill="none" stroke="#e3a725" stroke-width="3" stroke-opacity=".9"/>
-        <path d="M-540 160 A540 540 0 0 1 540 160" fill="none" stroke="#e3a725" stroke-width="1.2" stroke-opacity=".5" stroke-dasharray="6 6"/>
-        <g class="l-girder" stroke="#e3a725" stroke-width="1.2" stroke-opacity=".6">{% for i in "0123456789abcdefghijklmnopqrst" %}<line class="lg" style="--i:{{ forloop.counter0 }}" x1="0" y1="-382" x2="14" y2="-406"/>{% endfor %}</g>
-        <!-- invert arc -->
-        <path d="M-580 300 A1200 1200 0 0 0 580 300" fill="none" stroke="#3a3f46" stroke-width="14"/>
-        <!-- rock bolts -->
-        <g stroke="#9aa0a6" stroke-width="2" stroke-opacity=".55">
-          <line x1="-410" y1="-250" x2="-560" y2="-430"/><line x1="-230" y1="-370" x2="-300" y2="-590"/><line x1="0" y1="-420" x2="0" y2="-640"/><line x1="230" y1="-370" x2="300" y2="-590"/><line x1="410" y1="-250" x2="560" y2="-430"/>
+        <!-- lattice girder at the face (solid) and the previous one (dashed), at the inner face -->
+        <use href="#inner" fill="none" stroke="#e3a725" stroke-width="3" stroke-opacity=".95"/>
+        <path d="M-450 300 A732 732 0 0 1 -532 -40 A532 532 0 0 1 532 -40 A732 732 0 0 1 450 300" fill="none" stroke="#e3a725" stroke-width="1.2" stroke-opacity=".45" stroke-dasharray="7 7"/>
+        <!-- 4 m rock bolts, radial to the crown centre -->
+        <g stroke="#9aa0a6" stroke-width="2" stroke-opacity=".5">
+          <line x1="-575" y1="-40" x2="-975" y2="-40"/><line x1="-498" y1="-328" x2="-844" y2="-528"/><line x1="-288" y1="-538" x2="-488" y2="-884"/><line x1="0" y1="-615" x2="0" y2="-1015"/><line x1="288" y1="-538" x2="488" y2="-884"/><line x1="498" y1="-328" x2="844" y2="-528"/><line x1="575" y1="-40" x2="975" y2="-40"/>
         </g>
-        <!-- nozzle sweep -->
-        <g class="l-nozzle"><circle r="7" fill="#e3a725"/><path class="spray" d="M0 0 L-34 -150 L34 -150 Z" fill="#e3a725" fill-opacity=".18"/></g>
+        <!-- nozzle sweeping with the first layer -->
+        <g class="l-nozzle"><circle r="7" fill="#e3a725"/><path d="M0 0 L-34 -150 L34 -150 Z" fill="#e3a725" fill-opacity=".16"/></g>
         <!-- dimensions -->
-        <line x1="-580" y1="400" x2="580" y2="400" stroke="#5a606a" stroke-width="1"/><line x1="-580" y1="390" x2="-580" y2="410" stroke="#5a606a"/><line x1="580" y1="390" x2="580" y2="410" stroke="#5a606a"/>
-        <text x="0" y="430" text-anchor="middle" class="l-dim">11.6 m</text>
-        <line x1="660" y1="-420" x2="660" y2="300" stroke="#5a606a" stroke-width="1"/><line x1="650" y1="-420" x2="670" y2="-420" stroke="#5a606a"/><line x1="650" y1="300" x2="670" y2="300" stroke="#5a606a"/>
-        <text x="676" y="-50" class="l-dim">9.8 m</text>
-        <text x="-740" y="560" class="l-dim">SEM top heading · lattice girders at 1.2 m · shotcrete 300 mm in three layers · rock bolts 4 m</text>
+        <line x1="-560" y1="440" x2="560" y2="440" stroke="#5a606a"/><line x1="-560" y1="430" x2="-560" y2="450" stroke="#5a606a"/><line x1="560" y1="430" x2="560" y2="450" stroke="#5a606a"/><text x="0" y="470" text-anchor="middle" class="l-dim">11.2 m at springline</text>
+        <line x1="680" y1="-600" x2="680" y2="379" stroke="#5a606a"/><line x1="670" y1="-600" x2="690" y2="-600" stroke="#5a606a"/><line x1="670" y1="379" x2="690" y2="379" stroke="#5a606a"/><text x="696" y="-100" class="l-dim">9.8 m</text>
+        <text x="-740" y="520" class="l-dim">SEM top heading · lattice girders at 1.2 m · shotcrete 300 mm in three layers · 4 m rock bolts · bench and invert follow</text>
       </svg>
     </figure>
   </section>
@@ -64,8 +58,8 @@
       <div><div class="l-num">N = (σs + γz − σT) / cu</div><h3>Tools with the method shown</h3><p>Face stability, settlement and building damage, capacity curves, fibre-reinforced shotcrete. Transparent formulas, rated by colleagues.</p></div>
     </div>
   </section>
-  <section class="l-band" id="services">
-    <div class="l-grid l-three">{% for s in services %}<div class="l-svc">{{ s.name }}</div>{% endfor %}</div>
+  <section class="l-band" id="offices">
+    <div class="l-grid l-five">{% for o in offices %}<div class="l-svc"><strong>{{ o.code }}</strong><br><small>{{ o.city }}{% if o.is_hq %} · HQ{% endif %}</small></div>{% endfor %}</div>
   </section>
   <footer class="l-foot"><span>{{ company.name }} · {{ company.tagline }}</span><span>tunnelvision.ca</span></footer>
 </div>
@@ -82,22 +76,19 @@
 .l-tunnel { margin:0; } .l-tunnel svg { width:100%; height:auto; display:block; }
 .l-dim { font-family: var(--mono); font-size:15px; fill:#74787d; }
 /* shotcrete layers: sprayed on in sequence, slowly, then hold */
-.sc { stroke-dasharray: 1900; stroke-dashoffset: 1900; animation: spray 14s ease-in-out infinite; }
-.sc1 { animation-delay: 0s } .sc2 { animation-delay: 2.6s } .sc3 { animation-delay: 5.2s }
-@keyframes spray { 0% { stroke-dashoffset:1900 } 32% { stroke-dashoffset:0 } 85% { stroke-dashoffset:0 } 100% { stroke-dashoffset:1900 } }
-/* lattice girder diagonals: drawn along the arc from the lower-left springline over the crown, fading in with the first layer */
-.lg { transform-origin: 0 160px; transform: rotate(calc(-90deg + var(--i) * 6.2deg)); opacity: 0; animation: girder 14s linear infinite; animation-delay: calc(var(--i) * 0.12s); }
-@keyframes girder { 0% { opacity:0 } 6% { opacity:.9 } 85% { opacity:.9 } 100% { opacity:0 } }
-/* nozzle follows the first layer along the crown arc */
-.l-nozzle { animation: nozzle 14s ease-in-out infinite; offset-path: path("M-520 160 A520 520 0 0 1 520 160"); offset-rotate: auto 90deg; opacity:0; }
-@keyframes nozzle { 0% { offset-distance:0%; opacity:0 } 3% { opacity:1 } 32% { offset-distance:100%; opacity:1 } 34% { opacity:0 } 100% { offset-distance:100%; opacity:0 } }
-@media (prefers-reduced-motion: reduce) { .sc, .lg, .l-nozzle { animation:none; } .sc { stroke-dashoffset:0 } .lg { opacity:.9 } .l-nozzle { display:none } }
+.sc { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: spray 18s ease-in-out infinite; }
+.sc1 { animation-delay: 0s } .sc2 { animation-delay: 3.2s } .sc3 { animation-delay: 6.4s }
+@keyframes spray { 0% { stroke-dashoffset:1000 } 34% { stroke-dashoffset:0 } 88% { stroke-dashoffset:0 } 100% { stroke-dashoffset:1000 } }
+/* nozzle follows the first layer along the whole profile */
+.l-nozzle { animation: nozzle 18s ease-in-out infinite; offset-path: path("M-440 300 A722 722 0 0 1 -522 -40 A522 522 0 0 1 522 -40 A722 722 0 0 1 440 300"); offset-rotate: auto 90deg; opacity:0; }
+@keyframes nozzle { 0% { offset-distance:0%; opacity:0 } 2% { opacity:1 } 34% { offset-distance:100%; opacity:1 } 36% { opacity:0 } 100% { offset-distance:100%; opacity:0 } }
+@media (prefers-reduced-motion: reduce) { .sc, .l-nozzle { animation:none; } .sc { stroke-dashoffset:0 } .l-nozzle { display:none } }
 .l-band { padding:3rem 2rem; border-top:1px solid #1b1f25; }
 .l-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:2rem; max-width:1100px; margin:0 auto; }
 .l-num { font-family:var(--mono); color:#e3a725; font-size:.95rem; margin-bottom:.5rem; }
 .l-band h3 { color:#fff; margin-bottom:.4rem; font-weight:600; } .l-band p { color:#8d9196; }
-.l-three { grid-template-columns:repeat(3,1fr); gap:.8rem; } .l-svc { background:#0f1216; border:1px solid #1f242a; border-radius:6px; padding:.9rem 1rem; color:#c4c8cc; }
+.l-three { grid-template-columns:repeat(3,1fr); gap:.8rem; } .l-five { grid-template-columns:repeat(5,1fr); gap:.8rem; } .l-svc { background:#0f1216; border:1px solid #1f242a; border-radius:6px; padding:.9rem 1rem; color:#c4c8cc; }
 .l-foot { display:flex; justify-content:space-between; padding:1.2rem 2rem; color:#74787d; border-top:1px solid #1b1f25; font-size:.9rem; }
-@media (max-width: 900px) { .l-hero { grid-template-columns:1fr; } .l-grid, .l-three { grid-template-columns:1fr; } }
+@media (max-width: 900px) { .l-hero { grid-template-columns:1fr; } .l-grid, .l-three, .l-five { grid-template-columns:1fr; } }
 </style>
 {% endblock %}

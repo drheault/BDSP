@@ -31,7 +31,7 @@ PRESETS = {
     },
     "slate": {
         "name": "Dr. Sauer",
-        "description": "Logo gold (#E3A725) and grey (#74787D) with the dark blue. Black by default, light on request. Technical typeface, tighter density.",
+        "description": "Logo gold (#E3A725) and grey (#74787D) with the dark blue. Light by default, black on request. Technical typeface, tighter density.",
         "vars": {
             "font": "'IBM Plex Sans', Inter, 'Segoe UI', system-ui, sans-serif",
             "font-size": "16px", "radius": "6px",

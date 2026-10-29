@@ -23,7 +23,7 @@ class ProposalForm(TaggableFormMixin, ConfigurableFormMixin, forms.ModelForm):
     class Meta:
         model = Proposal
         fields = [
-            "title", "region", "client", "contact", "service_type", "owner", "status", "project_status", "due_date",
+            "title", "region", "office", "client", "contact", "service_type", "owner", "status", "project_status", "due_date",
             "probability", "currency", "location", "summary", "services", "closing_words", "signatory", "notes",
             "manual_value", "submitted_at", "decided_at", "include_fee_breakdown", "include_schedule", "include_terms", "include_capabilities",
         ]
@@ -181,7 +181,7 @@ class EmployeeForm(ConfigurableFormMixin, forms.ModelForm):
 
     class Meta:
         model = Employee
-        fields = ["name", "initials", "role", "rate", "cost_rate", "email", "external_id", "is_active"]
+        fields = ["name", "initials", "role", "office", "rate", "cost_rate", "email", "external_id", "is_active"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

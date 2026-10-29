@@ -1,0 +1,13 @@
+<div class="card-head"><h3>Weather{% if ctx.office %} · {{ ctx.office.city|default:ctx.office.code }}{% endif %}</h3></div>
+<div class="card-body" id="wx" {% if ctx.office %}data-lat="{{ ctx.office.latitude|default:'' }}" data-lon="{{ ctx.office.longitude|default:'' }}" data-tz="{{ ctx.office.timezone|default:'auto' }}"{% endif %}>
+  {% if ctx.office and ctx.office.latitude %}<div class="muted">Loading…</div>{% else %}<div class="muted">Set the office's latitude and longitude under Settings → Offices to show the weather.</div>{% endif %}
+</div>
+<script>
+(function(){ var el=document.getElementById("wx"); if(!el||!el.dataset.lat) return;
+  var codes={0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Rime fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Showers",81:"Showers",82:"Heavy showers",95:"Thunderstorm"};
+  fetch("https://api.open-meteo.com/v1/forecast?latitude="+el.dataset.lat+"&longitude="+el.dataset.lon+"&current=temperature_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone="+encodeURIComponent(el.dataset.tz)+"&forecast_days=3")
+  .then(function(r){return r.json()}).then(function(d){ var c=d.current, dy=d.daily; var h='<div style="font-size:2rem;font-weight:700">'+Math.round(c.temperature_2m)+'°C <small style="font-size:1rem;font-weight:500" class="muted">'+(codes[c.weather_code]||"")+' · wind '+Math.round(c.wind_speed_10m)+' km/h</small></div><table class="tbl mt-sm"><tbody>';
+    for(var i=0;i<dy.time.length;i++){ h+='<tr><td>'+new Date(dy.time[i]).toLocaleDateString(undefined,{weekday:"short"})+'</td><td class="num">'+Math.round(dy.temperature_2m_min[i])+'° / '+Math.round(dy.temperature_2m_max[i])+'°</td><td class="num">'+dy.precipitation_sum[i]+' mm</td></tr>'; }
+    el.innerHTML=h+'</tbody></table><small class="muted">Open-Meteo</small>'; }).catch(function(){ el.innerHTML='<div class="muted">Weather unavailable (no internet from this browser).</div>'; });
+})();
+</script>

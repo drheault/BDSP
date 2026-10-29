@@ -70,6 +70,7 @@ class AccessRoleForm(forms.ModelForm):
 class UserForm(forms.ModelForm):
     password = forms.CharField(required=False, widget=forms.PasswordInput, help_text="Leave blank to keep the current password.")
     roles = forms.ModelMultipleChoiceField(queryset=AccessRole.objects.all(), required=False, widget=forms.CheckboxSelectMultiple)
+    office = forms.ModelChoiceField(queryset=None, required=False)
 
     class Meta:
         model = User
@@ -78,8 +79,14 @@ class UserForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from .models import Office
+
+        self.fields["office"].queryset = Office.objects.filter(is_active=True)
         if self.instance.pk:
             self.fields["roles"].initial = self.instance.access_roles.all()
+            prof = getattr(self.instance, "profile", None)
+            if prof:
+                self.fields["office"].initial = prof.office_id
         else:
             self.fields["password"].required = True
 
@@ -91,6 +98,11 @@ class UserForm(forms.ModelForm):
         if commit:
             user.save()
             user.access_roles.set(self.cleaned_data["roles"])
+            from community.models import Profile
+
+            prof, _ = Profile.objects.get_or_create(user=user)
+            prof.office = self.cleaned_data.get("office")
+            prof.save()
         return user
 
 
@@ -152,3 +164,9 @@ class CustomFieldForm(forms.ModelForm):
     class Meta:
         model = CustomField
         fields = ["form_key", "key", "label", "type", "choices", "help_text", "required", "show_in_export", "order", "is_active"]
+
+
+class OfficeForm(forms.ModelForm):
+    class Meta:
+        model = __import__("core.models", fromlist=["Office"]).Office
+        fields = ["code", "name", "city", "country", "latitude", "longitude", "timezone", "is_hq", "notes", "order", "is_active"]
