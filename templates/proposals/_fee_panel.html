@@ -12,7 +12,7 @@
 </div>
 
 {% if can.edit_proposals %}<div class="card" id="add-item">
-  <div class="card-body"><details class="reveal" {% if item_form.errors or not items %}open{% endif %}><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} Add work item</span> <span class="muted" style="margin-left:.6rem">drawings, reports, design tasks, meetings…</span></summary>
+  <div class="card-body"><details class="reveal" {% if item_form.errors or not items %}open{% endif %}><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} Add work item</span>{% form_pencil "fee_item" %} <span class="muted" style="margin-left:.6rem">drawings, reports, design tasks, meetings…</span></summary>
     <form hx-post="{% url 'item_add' proposal.pk %}" hx-target="#fee-panel" class="inline-form reveal-body" hx-on::after-request="if(event.detail.successful){htmx.ajax('GET','{% url 'fee_summary' proposal.pk %}',{target:'#fee-summary'})}">
       <div class="field narrow" style="flex-basis:80px"><label>Code</label>{{ item_form.code }}</div>
       <div class="field" style="flex:2"><label>Name</label><input type="text" name="name" id="id_item_name" placeholder="e.g. Lining design drawings" required hx-get="{% url 'fee_suggest' proposal.pk %}" hx-trigger="input changed delay:400ms" hx-target="#suggestions" hx-include="#add-item select[name='kind']">{% for e in item_form.name.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>

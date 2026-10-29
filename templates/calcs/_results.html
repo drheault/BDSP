@@ -1,0 +1,7 @@
+{% if errors %}<div class="card-body"><div class="nonfield">{% for f, errs in errors.items %}{{ f }}: {{ errs|join:", " }} {% endfor %}</div></div>
+{% elif result %}
+<div class="card-head"><h3>Results</h3>{% if result.headline %}<strong>{{ result.headline }}</strong>{% endif %}</div>
+<table class="tbl"><tbody>{% for label, value, unit in result.results %}<tr><td>{{ label }}</td><td class="num"><strong>{{ value }}</strong> <small class="muted">{{ unit }}</small></td></tr>{% endfor %}</tbody></table>
+{% if result.checks %}<div class="card-body" style="border-top:1px solid var(--line)"><div class="stack">{% for label, ok in result.checks %}<div class="check {% if ok %}ok{% else %}bad{% endif %}">{% if ok %}✔{% else %}✘{% endif %} {{ label }}</div>{% endfor %}</div></div>{% endif %}
+{% if result.chart %}<div class="card-body chart-wrap">{{ result.chart|safe }}</div>{% endif %}
+{% else %}<div class="card-body muted">Change an input to see results.</div>{% endif %}

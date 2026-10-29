@@ -27,6 +27,19 @@ class EngineTests(TestCase):
         self.assertAlmostEqual(mmax, 80.0, places=1)  # wL²/8
 
 
+class SpecTests(TestCase):
+    def test_safe_eval_blocks_unsafe_and_runs_example(self):
+        from calcs.spec import EXAMPLE_SPEC, SpecError, safe_eval, validate_spec
+
+        self.assertEqual(safe_eval("w*L**2/8", {"w": 10, "L": 8}), 80)
+        for bad in ("__import__('os')", "open('x')", "(1).__class__", "L.real", "lambda: 1"):
+            with self.assertRaises((SpecError, SyntaxError)):
+                safe_eval(bad, {"L": 1})
+        self.assertTrue(validate_spec(EXAMPLE_SPEC))
+        with self.assertRaises(SpecError):
+            validate_spec({"inputs": [{"name": "x"}], "formulas": [{"name": "y", "expr": "zz+1"}]})
+
+
 class ToolViewTests(TestCase):
     def setUp(self):
         self.u = get_user_model().objects.create_superuser("u", "u@x.com", "p")
@@ -53,3 +66,45 @@ class ToolViewTests(TestCase):
         up = Tool.objects.get(name="Waler check")
         self.assertEqual(up.kind, "link")
         self.assertEqual({t.name for t in up.tags}, {"Temporary works", "Drawing"})
+
+
+    def test_live_run_state_params_and_spec_builder(self):
+        import json
+
+        from calcs.models import ProjectParams, Tool, ToolState
+        from calcs.spec import EXAMPLE_SPEC
+        from core.models import Currency
+        from proposals.models import Proposal
+
+        Currency.objects.create(code="CAD", name="Canadian dollar", symbol="CA$")
+        ensure_builtins()
+        p = Proposal.objects.create(title="P")
+        # project parameters feed the face-stability tool
+        r = self.client.post(reverse("project_params", args=[p.pk]), {"tunnel_diameter": "8.5", "cover": "20", "cu": "80"})
+        self.assertEqual(r.status_code, 302)
+        r = self.client.get(reverse("tool_detail", args=["face_stability"]) + f"?proposal={p.pk}")
+        self.assertContains(r, 'value="8.5"')
+        self.assertContains(r, "Results")  # live-rendered on open
+        # live recalculation endpoint + autosaved state
+        eng = REGISTRY["face_stability"]
+        data = {i.name: i.default for i in eng.inputs}
+        data["D"] = 9
+        r = self.client.post(reverse("tool_live", args=["face_stability"]), data, HTTP_HX_REQUEST="true")
+        self.assertContains(r, "Undrained stability number")
+        self.assertEqual(ToolState.objects.get(tool__key="face_stability", user=self.u).inputs["D"], 9)
+        # save inputs back to the project
+        data["proposal"] = p.pk
+        data["save_params"] = "1"
+        self.client.post(reverse("tool_detail", args=["face_stability"]), data)
+        self.assertEqual(ProjectParams.objects.get(proposal=p).values["tunnel_diameter"], 9)
+        # no-code tool
+        r = self.client.post(reverse("spec_builder"), {"name": "Waler", "category": "Temporary works", "summary": "s", "description": "", "version": "1", "tags": "", "spec_text": json.dumps(EXAMPLE_SPEC)})
+        self.assertEqual(r.status_code, 302)
+        t = Tool.objects.get(name="Waler")
+        self.assertEqual(t.kind, "spec")
+        r = self.client.post(reverse("tool_live", args=[t.key]), {"L": 8, "w": 10}, HTTP_HX_REQUEST="true")
+        self.assertContains(r, "80.0")
+        self.assertContains(r, "Bending moment")
+        r = self.client.post(reverse("spec_builder"), {"name": "Bad", "category": "x", "summary": "s", "description": "", "version": "1", "tags": "", "spec_text": json.dumps({"inputs": [{"name": "a"}], "formulas": [{"name": "b", "expr": "__import__('os')"}]})})
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(Tool.objects.filter(name="Bad").exists())

@@ -3,7 +3,8 @@
 {% block content %}
 <div class="page-head"><div><h1>Calculations &amp; tools</h1><div class="sub">Built-in design aids with the method shown, plus tools shared by colleagues. Likes and ratings move tools up or down.</div></div>
 <div class="actions"><form class="filters" method="get" style="margin:0"><input type="search" name="q" value="{{ q }}" placeholder="Search tools…"></form>
-<details class="reveal"><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} Share a tool</span></summary>
+<a class="btn btn-primary" href="{% url 'spec_builder' %}">{% include "includes/icons.html" with name="plus" %} Build a tool</a>
+<details class="reveal"><summary><span class="btn">{% include "includes/icons.html" with name="download" %} Share a file or link</span></summary>
 <div class="card reveal-body" style="position:absolute;right:2rem;z-index:30;width:min(640px,90vw)"><div class="card-body"><form method="post" action="{% url 'tool_upload' %}" enctype="multipart/form-data">{% csrf_token %}{% include "includes/form.html" with full_fields=",description,summary,tags," %}<div class="form-actions"><button class="btn btn-primary">Share</button></div></form></div></div></details></div></div>
 {% tag_datalist_tag %}
 <div class="grid grid-3">
@@ -16,7 +17,7 @@
   </div>
   <div class="stack">
     <div class="card"><div class="card-head"><h3>My saved calculations</h3></div><table class="tbl"><tbody>{% for run in my_runs %}<tr><td><a href="{% url 'run_detail' run.pk %}">{{ run.title }}</a><br><small class="muted">{{ run.tool.name }}{% if run.proposal %} · {{ run.proposal.number }}{% endif %} · {{ run.created_at|date:"j M" }}</small></td></tr>{% empty %}<tr><td class="muted">Run a tool and give it a title to save it here, optionally against a proposal.</td></tr>{% endfor %}</tbody></table></div>
-    <div class="card"><div class="card-body"><h3>Philosophy</h3><p class="muted">Every built-in tool prints its formulas and references so a reviewer can check them by hand. They are screening aids for proposals and early design; checked calculation packages remain the record. Rate honestly, comment with specifics, and share the spreadsheets you trust.</p></div></div>
+    <div class="card"><div class="card-body"><h3>Philosophy</h3><p class="muted">Every tool prints its formulas so a reviewer can check them by hand. Inputs linked to a project come from its shared parameters, so tunnel geometry or a beam size is entered once. Results update live, with sliders. Build your own with formulas, or share a spreadsheet; rate honestly and comment with specifics.</p></div></div>
   </div>
 </div>
 {% endblock %}

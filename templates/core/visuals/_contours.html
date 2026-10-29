@@ -1,0 +1,1 @@
+<g class="fe-contours">{% for t in mesh.triangles %}<polygon points="{{ t.points }}" fill="{{ t.fill }}" stroke="{{ t.fill }}" stroke-width=".6"/>{% endfor %}{% for b in bands %}<polygon points="{{ b.points }}" fill="none" stroke="#0b0d10" stroke-opacity=".55" stroke-width="1.2"/>{% endfor %}<polygon points="{{ mesh.boundary }}" fill="#000" stroke="#e3a725" stroke-width="2"/></g>

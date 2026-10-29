@@ -18,6 +18,7 @@ urlpatterns = [
     path("community/", include("community.urls")),
     path("calcs/", include("calcs.urls")),
     path("files/", include("files.urls")),
+    path("requests/", include("tickets.urls")),
 ]
 
 if settings.DEBUG:

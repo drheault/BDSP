@@ -1,31 +1,30 @@
-{% extends "base.html" %}{% load social tagchips %}
+{% extends "base.html" %}{% load social tagchips bdsp %}
 {% block title %}{{ tool.name }}{% endblock %}
 {% block content %}
-<div class="page-head"><div><div class="crumbs"><a href="{% url 'tool_list' %}">Calculations &amp; tools</a> / {{ tool.category }}</div><h1>{{ tool.name }}</h1><div class="sub">{{ tool.summary }} {% tag_chips tool True %}</div></div>
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'tool_list' %}">Calculations &amp; tools</a> / {{ tool.category }}</div><h1>{{ tool.name }}</h1><div class="sub">{{ tool.summary }} {% tag_chips tool True %}{% if tool.kind == "spec" %} <span class="badge">no-code tool by {{ tool.author.get_full_name|default:tool.author.username|default:"—" }}</span>{% endif %}</div></div>
 <div class="actions">{% reactions_for tool %}<span class="muted">{% if rating.n %}★ {{ rating.avg }} from {{ rating.n }}{% else %}Not rated yet{% endif %} · {{ tool.runs }} runs</span>
+{% if tool.kind == "spec" and tool.author == request.user or request.user.is_superuser and tool.kind == "spec" %}<a class="btn" href="{% url 'spec_edit' tool.key %}">{% include "includes/icons.html" with name="edit" %} Edit tool</a>{% endif %}
 {% if tool.kind != "builtin" and tool.author == request.user or request.user.is_superuser and tool.kind != "builtin" %}<details class="menu"><summary class="btn btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><form method="post" action="{% url 'tool_delete' tool.key %}" data-confirm="Remove this tool?">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Remove tool</button></form></div></details>{% endif %}</div></div>
 <div class="grid grid-3">
   <div class="span-2 stack">
     {% if engine %}
-    <div class="card"><div class="card-head"><h3>Inputs</h3>{% if result.headline %}<strong>{{ result.headline }}</strong>{% endif %}</div>
-      <div class="card-body"><form method="post">{% csrf_token %}
-        <div class="form-grid calc-grid">{% for f in form %}<div class="field"><label for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}{% if f.help_text %}<div class="help">{{ f.help_text }}</div>{% endif %}{% for e in f.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>{% endfor %}</div>
-        <div class="form-actions"><button class="btn btn-primary">Calculate</button>
-          <details class="reveal"><summary><span class="btn">Save result…</span></summary><div class="row-flex reveal-body"><input type="text" name="save_title" placeholder="Title, e.g. Eastside face check, C/D 2.3" style="min-width:260px"><select name="proposal" style="width:auto"><option value="">— not linked to a proposal —</option>{% for p in proposals %}<option value="{{ p.pk }}">{{ p.number }} {{ p.title|truncatechars:40 }}</option>{% endfor %}</select><button class="btn btn-sm">Calculate &amp; save</button></div></details></div>
+    <div class="card"><div class="card-head"><h3>Inputs</h3>
+      <form method="get" class="row-flex" style="margin:0"><select name="proposal" onchange="this.form.submit()" style="width:auto"><option value="">— no project —</option>{% for p in proposals %}<option value="{{ p.pk }}" {% if proposal and proposal.pk == p.pk %}selected{% endif %}>{{ p.project_number|default:p.number }} {{ p.title|truncatechars:34 }}</option>{% endfor %}</select>{% if proposal %}<a class="btn btn-sm" href="{% url 'project_params' proposal.pk %}">Project parameters</a>{% endif %}<a class="btn btn-sm btn-ghost" href="?defaults=1{% if proposal %}&proposal={{ proposal.pk }}{% endif %}" title="Reset to the tool's defaults">Defaults</a></form></div>
+      <div class="card-body"><form method="post" id="calc-form" hx-post="{% url 'tool_live' tool.key %}" hx-trigger="input changed delay:250ms, change" hx-target="#results" hx-swap="innerHTML" hx-include="this">{% csrf_token %}{% if proposal %}<input type="hidden" name="proposal" value="{{ proposal.pk }}">{% endif %}
+        <div class="form-grid calc-grid">{% for f in form %}<div class="field"><label for="{{ f.id_for_label }}">{{ f.label }}{% with lp=f.field.widget.attrs|get_item:"data-param" %}{% if lp %} <span class="link-dot" title="Linked to project parameter “{{ lp }}”">⚭</span>{% endif %}{% endwith %}</label>{{ f }}{% if f.help_text %}<div class="help">{{ f.help_text }}</div>{% endif %}{% for e in f.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>{% endfor %}</div>
+        <div class="form-actions"><span class="muted">Results update as you type.</span>
+          <details class="reveal"><summary><span class="btn">Save result…</span></summary><div class="row-flex reveal-body"><input type="text" name="save_title" placeholder="Title, e.g. Eastside face check, C/D 2.3" style="min-width:260px"><button class="btn btn-sm btn-primary">Save</button></div></details>
+          {% if proposal and linked_params %}<button class="btn btn-sm" name="save_params" value="1" title="Write the linked inputs back to the project parameters">Save inputs to {{ proposal.project_number|default:proposal.number }}</button>{% endif %}</div>
       </form></div></div>
-    {% if result %}
-    <div class="card"><div class="card-head"><h3>Results</h3></div>
-      <table class="tbl"><tbody>{% for label, value, unit in result.results %}<tr><td>{{ label }}</td><td class="num"><strong>{{ value }}</strong> <small class="muted">{{ unit }}</small></td></tr>{% endfor %}</tbody></table>
-      <div class="card-body" style="border-top:1px solid var(--line)"><div class="stack">{% for label, ok in result.checks %}<div class="check {% if ok %}ok{% else %}bad{% endif %}">{% if ok %}✔{% else %}✘{% endif %} {{ label }}</div>{% endfor %}</div></div>
-      {% if result.chart %}<div class="card-body chart-wrap">{{ result.chart|safe }}</div>{% endif %}</div>
-    {% endif %}
+    <div class="card" id="results">{% include "calcs/_results.html" %}</div>
     {% else %}
     <div class="card"><div class="card-body">{% if tool.file %}<a class="btn btn-primary" href="{{ tool.file.url }}">{% include "includes/icons.html" with name="download" %} Download {{ tool.file.name|cut:"tools/" }}</a>{% endif %}{% if tool.url %} <a class="btn" href="{{ tool.url }}" target="_blank" rel="noopener">Open link</a>{% endif %}<div class="muted mt-sm">Version {{ tool.version }} · shared by {{ tool.author.get_full_name|default:tool.author.username|default:"—" }} · {{ tool.created_at|date:"j M Y" }}</div></div></div>
     {% endif %}
-    <div class="card"><div class="card-head"><h3>Method, assumptions &amp; philosophy</h3></div><div class="card-body" style="white-space:pre-wrap;line-height:1.65">{{ tool.description }}</div></div>
+    <div class="card"><div class="card-head"><h3>Method, assumptions &amp; philosophy</h3></div><div class="card-body" style="white-space:pre-wrap;line-height:1.65">{{ tool.description|default:"—" }}</div></div>
     {% comments_for tool "Discussion" %}
   </div>
   <div class="stack">
+    {% if linked_params %}<div class="card"><div class="card-body"><h3>Linked parameters</h3><p class="muted">These inputs come from, and can write back to, the project parameters, so geometry and ground data are entered once.</p><ul class="muted" style="padding-left:1.1rem;margin:0">{% for i, p in linked_params %}<li>{{ i.label }} ⚭ {{ p.1|default:i.param }}</li>{% endfor %}</ul></div></div>{% endif %}
     <div class="card"><div class="card-body"><h3>Rate this tool</h3>
       <form method="post" action="{% url 'rate' tool|ct_id tool.pk %}" class="stack">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
         <div class="stars">{% for s in "12345" %}<label><input type="radio" name="stars" value="{{ s }}" {% if my_rating and my_rating.stars == s|add:0 %}checked{% endif %}> {{ s }}★</label>{% endfor %}</div>
@@ -34,4 +33,13 @@
     {% if runs %}<div class="card"><div class="card-head"><h3>Recent saved runs</h3></div><table class="tbl"><tbody>{% for run in runs %}<tr><td><a href="{% url 'run_detail' run.pk %}">{{ run.title }}</a><br><small class="muted">{{ run.user.get_full_name|default:run.user.username|default:"" }}{% if run.proposal %} · {{ run.proposal.number }}{% endif %}</small></td></tr>{% endfor %}</tbody></table></div>{% endif %}
   </div>
 </div>
+<script>
+// Sliders: every live number input with a data-min/max gets a range control kept in sync both ways.
+(function(){ document.querySelectorAll("#calc-form input.live[data-min]").forEach(function(inp){
+  var r=document.createElement("input"); r.type="range"; r.min=inp.dataset.min; r.max=inp.dataset.max; r.step=inp.step||"any"; r.value=inp.value; r.className="slider"; r.setAttribute("aria-label", inp.id);
+  inp.insertAdjacentElement("afterend", r);
+  r.addEventListener("input", function(){ inp.value=r.value; inp.dispatchEvent(new Event("input", {bubbles:true})); });
+  inp.addEventListener("input", function(){ r.value=inp.value; });
+}); })();
+</script>
 {% endblock %}

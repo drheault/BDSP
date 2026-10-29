@@ -1,0 +1,14 @@
+{% load static %}
+<figure class="l-tunnel" aria-label="Issued-for-construction drawing fading into the built tunnel">
+  <svg viewBox="-760 -800 1520 1340" preserveAspectRatio="xMidYMid slice">
+    <defs><radialGradient id="ph2" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#3a3f46"/><stop offset=".6" stop-color="#15181c"/><stop offset="1" stop-color="#07080a"/></radialGradient></defs>
+    <rect x="-760" y="-800" width="1520" height="1340" fill="#07080a"/>
+    <g class="frame f1">{% include "core/visuals/_profile.html" %}</g>
+    <g class="frame f2">{% if photo %}<image href="{{ photo }}" x="-760" y="-800" width="1520" height="1340" preserveAspectRatio="xMidYMid slice"/>{% else %}<rect x="-760" y="-800" width="1520" height="1340" fill="url(#ph2)"/><path d="M-480 300 A760 760 0 0 1 -560 -40 A560 560 0 0 1 560 -40 A760 760 0 0 1 480 300" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="40"/>{% endif %}</g>
+  </svg>
+</figure>
+<style>
+.frame { opacity: 0; animation: cycle2 20s ease-in-out infinite; } .frame.f2 { animation-delay: 10s }
+@keyframes cycle2 { 0% { opacity:0 } 8% { opacity:1 } 45% { opacity:1 } 55% { opacity:0 } 100% { opacity:0 } }
+@media (prefers-reduced-motion: reduce) { .frame { animation: none } .frame.f1 { opacity: 1 } }
+</style>

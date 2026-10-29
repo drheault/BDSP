@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "community",
     "calcs",
     "files",
+    "tickets",
 ]
 
 MIDDLEWARE = [
@@ -107,3 +108,13 @@ LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
+
+# Email for notifications: console in development; set EMAIL_URL-style variables in production.
+EMAIL_BACKEND = os.environ.get("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", "1") == "1"
+DEFAULT_FROM_EMAIL = os.environ.get("DJANGO_FROM_EMAIL", "tunnelvision@dr-sauer.com")
+SITE_URL = os.environ.get("DJANGO_SITE_URL", "http://127.0.0.1:8000")

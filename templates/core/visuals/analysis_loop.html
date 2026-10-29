@@ -1,0 +1,17 @@
+{% load visuals static %}
+<figure class="l-tunnel" aria-label="Design cycle: finite element mesh, analysis results, issued-for-construction drawing, and the built tunnel">
+  <svg viewBox="-760 -800 1520 1340" preserveAspectRatio="xMidYMid slice">
+    <rect x="-760" y="-800" width="1520" height="1340" fill="#07080a"/>
+    <g class="frame f1">{% fe_mesh %}</g>
+    <g class="frame f2">{% fe_contours %}</g>
+    <g class="frame f3"><rect x="-760" y="-800" width="1520" height="1340" fill="#07080a"/>{% include "core/visuals/_profile.html" %}</g>
+    <g class="frame f4"><rect x="-760" y="-800" width="1520" height="1340" fill="#07080a"/>{% if photo %}<image href="{{ photo }}" x="-760" y="-800" width="1520" height="1340" preserveAspectRatio="xMidYMid slice"/>{% else %}<rect x="-760" y="-800" width="1520" height="1340" fill="url(#ph)"/><path d="M-480 300 A760 760 0 0 1 -560 -40 A560 560 0 0 1 560 -40 A760 760 0 0 1 480 300" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="40"/>{% endif %}</g>
+    <defs><radialGradient id="ph" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#3a3f46"/><stop offset=".6" stop-color="#15181c"/><stop offset="1" stop-color="#07080a"/></radialGradient></defs>
+  </svg>
+</figure>
+<style>
+.frame { opacity: 0; animation: cycle 28s ease-in-out infinite; }
+.frame.f1 { animation-delay: 0s } .frame.f2 { animation-delay: 7s } .frame.f3 { animation-delay: 14s } .frame.f4 { animation-delay: 21s }
+@keyframes cycle { 0% { opacity:0 } 6% { opacity:1 } 25% { opacity:1 } 31% { opacity:0 } 100% { opacity:0 } }
+@media (prefers-reduced-motion: reduce) { .frame { animation: none; opacity: 0 } .frame.f2 { opacity: 1 } }
+</style>

@@ -39,7 +39,7 @@ class SeedAndCoreTests(TestCase):
             {"name": "Deep Rock", "tagline": "", "primary_color": "#112233", "accent_color": "#445566",
              "proposal_prefix": "DR", "proposal_footer": "", "number_digits": 3, "sequence_start": 601,
              "bd_number_format": "B-{region}{seq}", "phase_number_format": "{seq}{phase}", "require_project_number_when_won": "on",
-             "smb_path_template": "", "notes_server": "", "notes_database": ""},
+             "smb_path_template": "", "notes_server": "", "notes_database": "", "landing_visual": "analysis_loop"},
         )
         self.assertEqual(r.status_code, 302)
         self.assertEqual(CompanyProfile.get_solo().name, "Deep Rock")
@@ -112,3 +112,10 @@ class SeedAndCoreTests(TestCase):
         self.assertNotContains(r, 'id="w-pipeline"')
         self.client.post(reverse("dashboard_customize"), {"reset": "1"})
         self.assertEqual(Profile.objects.get(user=local).dashboard, [])
+
+
+    def test_landing_visual_options_render(self):
+        for v in ("analysis_loop", "shotcrete", "advance", "drawing_photo"):
+            r = self.client.get(reverse("dashboard") + f"?visual={v}")
+            self.assertEqual(r.status_code, 200, v)
+        self.assertContains(self.client.get(reverse("dashboard") + "?visual=analysis_loop"), "fe-mesh")

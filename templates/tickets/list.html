@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% load social %}
+{% block title %}Requests{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Requests</h1><div class="sub">Access, profile changes, data corrections, ideas and bugs. Each kind goes to the group that handles it; you are notified as it moves.</div></div>
+<div class="actions"><details class="reveal"><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} New request</span></summary>
+<div class="card reveal-body" style="position:absolute;right:2rem;z-index:30;width:min(600px,92vw)"><div class="card-body"><form method="post" action="{% url 'request_create' %}">{% csrf_token %}{% include "includes/form.html" with full_fields=",title,details," %}<div class="form-actions"><button class="btn btn-primary">Send request</button></div></form></div></div></details></div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    {% if handler %}<div class="card"><div class="card-head"><h3>Queue for my groups</h3><form class="row-flex" method="get" style="margin:0"><select name="status" onchange="this.form.submit()" style="width:auto"><option value="open" {% if status == 'open' %}selected{% endif %}>Open &amp; in progress</option><option value="done" {% if status == 'done' %}selected{% endif %}>Done</option><option value="declined" {% if status == 'declined' %}selected{% endif %}>Declined</option><option value="" {% if status == '' %}selected{% endif %}>All</option></select></form></div>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>No.</th><th>Request</th><th>Kind</th><th>From</th><th>Status</th><th>Assignee</th><th>Age</th></tr></thead><tbody>
+      {% for r in queue %}<tr><td class="mono">R-{{ r.number }}</td><td><a class="strong" href="{% url 'request_detail' r.pk %}">{{ r.title }}</a>{% if r.priority == 'high' %} <span class="badge badge-lost">high</span>{% endif %}</td><td><small>{{ r.kind.name }}</small></td><td>{{ r.requester.get_full_name|default:r.requester.username }}</td><td><span class="badge badge-{% if r.status == 'open' %}submitted{% elif r.status == 'progress' %}drafting{% elif r.status == 'done' %}won{% else %}lost{% endif %}">{{ r.get_status_display }}</span></td><td>{{ r.assignee.get_full_name|default:"—" }}</td><td><small>{{ r.created_at|timesince }}</small></td></tr>
+      {% empty %}<tr><td colspan="7" class="muted">Nothing in the queue.</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+    <div class="card"><div class="card-head"><h3>My requests</h3></div>
+      <table class="tbl"><tbody>{% for r in mine %}<tr><td class="mono">R-{{ r.number }}</td><td><a href="{% url 'request_detail' r.pk %}">{{ r.title }}</a><br><small class="muted">{{ r.kind.name }} · {{ r.created_at|date:"j M Y" }}</small></td><td><span class="badge badge-{% if r.status == 'open' %}submitted{% elif r.status == 'progress' %}drafting{% elif r.status == 'done' %}won{% else %}lost{% endif %}">{{ r.get_status_display }}</span></td></tr>{% empty %}<tr><td class="muted">You have not raised any requests.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="card"><div class="card-head"><h3>Who handles what</h3></div><table class="tbl"><tbody>{% for k in kinds %}<tr><td><strong>{{ k.name }}</strong><br><small class="muted">{{ k.description }}</small></td><td class="right"><small>{{ k.handled_by|default:"Administrators" }}</small></td></tr>{% endfor %}</tbody></table>
+    <div class="card-body muted" style="border-top:1px solid var(--line)">Handling groups are set under Roles &amp; users → Request kinds. Members choose in-app or email notifications on their profile.</div></div>
+</div>
+{% endblock %}

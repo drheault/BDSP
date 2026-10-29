@@ -20,7 +20,14 @@ def company(request):
     if hasattr(request, "caps"):
         pass
     request.caps = caps
+    unread = 0
+    if getattr(user, "is_authenticated", False):
+        try:
+            unread = user.notifications.filter(read_at__isnull=True).count()
+        except Exception:
+            unread = 0
     return {
+        "unread_notifications": unread,
         "company": company, "caps": caps, "can": {c: True for c in caps}, "real_caps": real_caps,
         "is_privileged": bool(real_caps & {"manage_users", "manage_settings", "manage_forms", "manage_integrations"}) or getattr(user, "is_superuser", False),
         "view_as": view_as, "capability_labels": CAPABILITIES,

@@ -1,10 +1,11 @@
-{% extends "base.html" %}{% load humanize tagchips social %}{% load bdsp %}
+{% extends "base.html" %}{% load humanize tagchips social bdsp %}{% load bdsp %}
 {% block title %}{{ proposal.number }} {{ proposal.title }}{% endblock %}
 {% block content %}
 {% include "proposals/_proposal_header.html" %}
 <form method="post">{% csrf_token %}
 <div class="grid grid-3">
   <div class="card span-2"><div class="card-body">
+    <div class="row-flex" style="justify-content:flex-end">{% form_pencil "proposal" %}</div>
     {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     <div class="form-grid">
       {% if form.title %}{% include "includes/field.html" with field=form.title extra_class="full" %}{% endif %}

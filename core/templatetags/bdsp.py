@@ -53,3 +53,10 @@ def pct_class(value):
         return ""
     v = abs(float(value))
     return "ok" if v <= 10 else ("warn" if v <= 25 else "bad")
+
+
+@register.inclusion_tag("includes/pencil.html", takes_context=True)
+def form_pencil(context, form_key, label="Edit this form"):
+    """Small pencil for admins: opens the form builder for this form (hidden for everyone else)."""
+    can = context.get("can") or {}
+    return {"show": bool(can.get("manage_forms")), "form_key": form_key, "label": label}

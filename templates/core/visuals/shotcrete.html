@@ -1,0 +1,23 @@
+<figure class="l-tunnel" aria-label="SEM tunnel cross-section with shotcrete lining sprayed in layers">
+  <svg viewBox="-760 -800 1520 1340" preserveAspectRatio="xMidYMid meet">
+    <defs><linearGradient id="rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c0e11"/><stop offset="1" stop-color="#050609"/></linearGradient>
+      <pattern id="hatch" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="22" stroke="#1a1e24" stroke-width="1"/></pattern>
+      <path id="prof" d="M-480 300 A760 760 0 0 1 -560 -40 A560 560 0 0 1 560 -40 A760 760 0 0 1 480 300" pathLength="1000"/>
+      <path id="inner" d="M-463 300 A745 745 0 0 1 -545 -40 A545 545 0 0 1 545 -40 A745 745 0 0 1 463 300" pathLength="1000"/></defs>
+    <rect x="-760" y="-800" width="1520" height="1340" fill="url(#rock)"/><rect x="-760" y="-800" width="1520" height="1340" fill="url(#hatch)" opacity=".85"/>
+    <path d="M-480 300 A760 760 0 0 1 -560 -40 A560 560 0 0 1 560 -40 A760 760 0 0 1 480 300 Z" fill="#000"/>
+    <path d="M-480 300 A1500 1500 0 0 0 480 300" fill="#0b0d10" stroke="#262b31" stroke-width="1.5" stroke-dasharray="10 10"/>
+    <g fill="none"><use href="#prof" class="sc sc1" stroke="#3a3f46" stroke-width="30"/><use href="#prof" class="sc sc2" stroke="#4b5159" stroke-width="20"/><use href="#prof" class="sc sc3" stroke="#5c626b" stroke-width="10"/></g>
+    <use href="#inner" fill="none" stroke="#e3a725" stroke-width="3" stroke-opacity=".95"/>
+    <g stroke="#9aa0a6" stroke-width="2" stroke-opacity=".5"><line x1="-575" y1="-40" x2="-975" y2="-40"/><line x1="-498" y1="-328" x2="-844" y2="-528"/><line x1="-288" y1="-538" x2="-488" y2="-884"/><line x1="0" y1="-615" x2="0" y2="-1015"/><line x1="288" y1="-538" x2="488" y2="-884"/><line x1="498" y1="-328" x2="844" y2="-528"/><line x1="575" y1="-40" x2="975" y2="-40"/></g>
+    <g class="l-nozzle"><circle r="7" fill="#e3a725"/><path d="M0 0 L-34 -150 L34 -150 Z" fill="#e3a725" fill-opacity=".16"/></g>
+  </svg>
+</figure>
+<style>
+.sc { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: spray 18s ease-in-out infinite; }
+.sc1 { animation-delay: 0s } .sc2 { animation-delay: 3.2s } .sc3 { animation-delay: 6.4s }
+@keyframes spray { 0% { stroke-dashoffset:1000 } 34% { stroke-dashoffset:0 } 88% { stroke-dashoffset:0 } 100% { stroke-dashoffset:1000 } }
+.l-nozzle { animation: nozzle 18s ease-in-out infinite; offset-path: path("M-440 300 A722 722 0 0 1 -522 -40 A522 522 0 0 1 522 -40 A722 722 0 0 1 440 300"); offset-rotate: auto 90deg; opacity:0; }
+@keyframes nozzle { 0% { offset-distance:0%; opacity:0 } 2% { opacity:1 } 34% { offset-distance:100%; opacity:1 } 36% { opacity:0 } 100% { offset-distance:100%; opacity:0 } }
+@media (prefers-reduced-motion: reduce) { .sc, .l-nozzle { animation:none; } .sc { stroke-dashoffset:0 } .l-nozzle { display:none } }
+</style>

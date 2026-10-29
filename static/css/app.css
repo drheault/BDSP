@@ -454,3 +454,12 @@ html[data-ids="show"] [data-id]::after { content: " #" attr(data-id); font-famil
 
 .unreach-icon { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; background: var(--warn-100); color: #8a6900; }
 .unreach-icon svg { width: 32px; height: 32px; } .unreach-icon.auth { background: var(--bad-100); color: var(--bad); } .unreach-icon.missing, .unreach-icon.other { background: var(--info-100); color: var(--navy); }
+
+/* ---- live calculators -------------------------------------------------- */
+input.slider { width: 100%; margin-top: .35rem; accent-color: var(--accent); min-height: 0; padding: 0; border: 0; background: transparent; }
+.link-dot { color: var(--accent); font-weight: 700; cursor: help; }
+
+.pencil { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; color: var(--ink-3); border: 1px dashed var(--line-2); margin-left: .4rem; vertical-align: middle; }
+.pencil svg { width: 13px; height: 13px; } .pencil:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+html[data-editmode="off"] .pencil { display: none; }
+.notif-badge { background: var(--accent); color: #000; border-radius: 999px; font-size: .68rem; font-weight: 700; padding: .05rem .4rem; margin-left: .3rem; }

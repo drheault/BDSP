@@ -1,8 +1,8 @@
-{% extends "base.html" %}{% load tagchips %}
+{% extends "base.html" %}{% load tagchips bdsp %}
 {% block title %}New proposal{% endblock %}
 {% block content %}
 <div class="page-head"><div><div class="crumbs"><a href="{% url 'proposal_list' %}">Proposals</a> /</div><h1>New proposal</h1><div class="sub">Pick a template to start with pre-written sections; you can edit everything afterwards.</div></div></div>
-<div class="card" style="max-width:860px"><div class="card-body"><form method="post">{% csrf_token %}
+<div class="card" style="max-width:860px"><div class="card-body"><div class="row-flex" style="justify-content:flex-end">{% form_pencil "proposal_create" %}</div><form method="post">{% csrf_token %}
   {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
   <div class="form-grid">
     {% include "includes/field.html" with field=form.title extra_class="full" %}

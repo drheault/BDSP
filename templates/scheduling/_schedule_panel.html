@@ -24,7 +24,7 @@
   <div class="card-head"><h3>Tasks &amp; milestones</h3></div>
   <div class="table-wrap"><table class="tbl"><thead><tr><th style="width:28px"></th><th>Task</th><th>Phase</th><th>Start</th><th>End</th><th class="num">Days</th><th>Done</th><th>After</th><th></th></tr></thead>
   <tbody>{% for t in tasks %}{% include "scheduling/_task_row.html" %}{% empty %}<tr><td colspan="9" class="muted">No tasks yet.</td></tr>{% endfor %}</tbody></table></div>
-  {% if can.edit_proposals %}<div class="add-bar"><details class="reveal" {% if task_form.errors %}open{% endif %}><summary><span class="btn btn-sm">{% include "includes/icons.html" with name="plus" %} Add task or milestone</span></summary>
+  {% if can.edit_proposals %}<div class="add-bar"><details class="reveal" {% if task_form.errors %}open{% endif %}><summary><span class="btn btn-sm">{% include "includes/icons.html" with name="plus" %} Add task or milestone</span></summary>{% form_pencil "task" %}
     <form hx-post="{% url 'task_add' proposal.pk %}" hx-target="#schedule-panel" class="inline-form reveal-body">
       <div class="field" style="flex:2"><label>Task name</label>{{ task_form.name }}{% for e in task_form.name.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
       <div class="field"><label>Phase</label>{{ task_form.phase }}</div>

@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% load social %}
+{% block title %}R-{{ req.number }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'request_list' %}">Requests</a> / R-{{ req.number }}</div><h1>{{ req.title }}</h1><div class="sub">{{ req.kind.name }} · raised by {{ req.requester.get_full_name|default:req.requester.username }} {{ req.created_at|timesince }} ago{% if req.on_behalf_of %} · about {{ req.on_behalf_of.get_full_name|default:req.on_behalf_of.username }}{% endif %} · <span class="badge badge-{% if req.status == 'open' %}submitted{% elif req.status == 'progress' %}drafting{% elif req.status == 'done' %}won{% else %}lost{% endif %}">{{ req.get_status_display }}</span>{% if req.priority == 'high' %} <span class="badge badge-lost">high priority</span>{% endif %}</div></div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-body" style="white-space:pre-wrap">{{ req.details|default:"(no details)" }}{% if req.payload %}<table class="tbl mt"><tbody>{% for k, v in req.payload.items %}<tr><td class="mono">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>{% endif %}</div></div>
+    <div class="card"><div class="card-head"><h3>History</h3></div><div class="card-body stack">{% for e in events %}<div class="comment"><div class="comment-head">{% if e.user %}{% avatar e.user 24 %}<strong>{{ e.user.get_full_name|default:e.user.username }}</strong>{% endif %}<span class="muted">{{ e.created_at|date:"j M Y H:i" }}</span>{% if e.status %}<span class="badge">{{ e.status }}</span>{% endif %}</div>{% if e.note %}<div class="comment-body">{{ e.note|linebreaksbr }}</div>{% endif %}</div>{% endfor %}
+      <form method="post" action="{% url 'request_comment' req.pk %}" class="row-flex">{% csrf_token %}<input type="text" name="note" placeholder="Add a comment…" required><button class="btn btn-sm">Send</button></form></div></div>
+  </div>
+  <div class="stack">
+    {% if handler %}<div class="card"><div class="card-body"><h3>Handle</h3><form method="post" action="{% url 'request_update' req.pk %}" class="stack">{% csrf_token %}{% include "includes/field.html" with field=form.status %}{% include "includes/field.html" with field=form.priority %}{% include "includes/field.html" with field=form.assignee %}{% include "includes/field.html" with field=form.resolution %}{% include "includes/field.html" with field=form.note %}<button class="btn btn-primary">Update &amp; notify</button></form>
+      {% if req.kind.key == "profile" and req.payload %}<div class="help mt-sm">Marking this done applies the requested profile values automatically.</div>{% endif %}</div></div>{% endif %}
+    {% if req.resolution %}<div class="card"><div class="card-body"><h3>Resolution</h3><p>{{ req.resolution|linebreaksbr }}</p></div></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

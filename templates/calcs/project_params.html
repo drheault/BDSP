@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ proposal.number }} parameters{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+<div class="grid grid-3">
+  <div class="span-2"><form method="post" class="stack">{% csrf_token %}
+    {% for group, rows in groups %}<div class="card"><div class="card-head"><h3>{{ group }}</h3></div><div class="card-body"><div class="form-grid">{% for key, label, unit, value in rows %}<div class="field"><label for="p_{{ key }}">{{ label }}{% if unit %} <span class="muted">({{ unit }})</span>{% endif %}</label><input type="number" step="any" id="p_{{ key }}" name="{{ key }}" value="{{ value|default_if_none:'' }}"></div>{% endfor %}</div></div></div>{% endfor %}
+    <div class="form-actions"><button class="btn btn-primary">Save parameters</button>{% if pp.updated_at %}<span class="muted">last saved {{ pp.updated_at|date:"j M Y H:i" }}{% if pp.updated_by %} by {{ pp.updated_by.get_full_name|default:pp.updated_by.username }}{% endif %}</span>{% endif %}</div></form></div>
+  <div class="stack">
+    <div class="card"><div class="card-body"><h3>One set of numbers</h3><p class="muted">Tunnel geometry, ground and lining data live here once. Open any tool with this project selected and its linked inputs are filled from these values; “Save inputs to project” on a tool writes back.</p></div></div>
+    <div class="card"><div class="card-head"><h3>Tools using these parameters</h3></div><table class="tbl"><tbody>{% for t in tools %}<tr><td><a href="{% url 'tool_detail' t.key %}?proposal={{ proposal.pk }}">{{ t.name }}</a></td></tr>{% endfor %}</tbody></table></div>
+  </div>
+</div>
+{% endblock %}

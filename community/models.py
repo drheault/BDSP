@@ -76,6 +76,8 @@ class Profile(models.Model):
     title = models.CharField(max_length=120, blank=True, help_text="e.g. Senior Tunnel Engineer")
     office = models.ForeignKey("core.Office", on_delete=models.SET_NULL, null=True, blank=True, related_name="people")
     dashboard = models.JSONField(default=list, blank=True, help_text="Ordered widget keys; empty = defaults for the user's roles.")
+    notify_inapp = models.BooleanField(default=True, help_text="Show notifications in TunnelVision.")
+    notify_email = models.BooleanField(default=False, help_text="Also send notifications by email.")
     bio = models.TextField(blank=True)
     open_to_mentor = models.BooleanField(default=True)
     looking_for_mentor = models.BooleanField(default=True)

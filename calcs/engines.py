@@ -21,6 +21,9 @@ class Input:
     help: str = ""
     choices: list = field(default_factory=list)
     step: float = 0.1
+    param: str = ""  # canonical project parameter key (calcs/params.py)
+    min: float | None = None  # slider range (optional)
+    max: float | None = None
 
 
 def _svg_chart(series, xlabel, ylabel, width=640, height=360, points=None, xlim=None, ylim=None, title=""):
@@ -85,11 +88,11 @@ class FaceStability:
         "pressure window to the monitoring trigger levels."
     )
     inputs = [
-        Input("D", "Tunnel diameter D", "m", 6.5), Input("C", "Cover to crown C", "m", 15),
-        Input("gamma", "Unit weight γ (bulk)", "kN/m³", 19), Input("sigma_s", "Surface surcharge σs", "kPa", 20),
-        Input("cu", "Undrained shear strength cu (clay)", "kPa", 60), Input("c", "Effective cohesion c′ (drained)", "kPa", 2),
-        Input("phi", "Effective friction angle φ′", "°", 32), Input("hw", "Water head above axis (0 if dry)", "m", 8),
-        Input("sigma_T", "Applied face support pressure σT (total, at axis)", "kPa", 150), Input("fos", "Required factor of safety on support", "", 1.5, step=0.05),
+        Input("D", "Tunnel diameter D", "m", 6.5, param="tunnel_diameter", min=2, max=16), Input("C", "Cover to crown C", "m", 15, param="cover", min=1, max=60),
+        Input("gamma", "Unit weight γ (bulk)", "kN/m³", 19, param="gamma", min=14, max=24), Input("sigma_s", "Surface surcharge σs", "kPa", 20, param="surcharge", min=0, max=100),
+        Input("cu", "Undrained shear strength cu (clay)", "kPa", 60, param="cu", min=5, max=300), Input("c", "Effective cohesion c′ (drained)", "kPa", 2, param="c", min=0, max=50),
+        Input("phi", "Effective friction angle φ′", "°", 32, param="phi", min=15, max=45), Input("hw", "Water head above axis (0 if dry)", "m", 8, param="water_head", min=0, max=40),
+        Input("sigma_T", "Applied face support pressure σT (total, at axis)", "kPa", 150, param="face_pressure", min=0, max=600), Input("fos", "Required factor of safety on support", "", 1.5, step=0.05, min=1, max=2.5),
     ]
 
     def run(self, v):
@@ -136,8 +139,8 @@ class SettlementDamage:
         "pressure, grouting and advance rate — tie it to the Face stability tool and to monitoring triggers."
     )
     inputs = [
-        Input("D", "Tunnel diameter D", "m", 6.5), Input("z0", "Depth to axis z0", "m", 18), Input("Vl", "Volume loss Vl", "%", 1.0, step=0.05),
-        Input("K", "Trough width parameter K", "", 0.5, help="0.5 clays, 0.25–0.35 sands", step=0.05),
+        Input("D", "Tunnel diameter D", "m", 6.5, param="tunnel_diameter", min=2, max=16), Input("z0", "Depth to axis z0", "m", 18, param="depth_axis", min=4, max=70), Input("Vl", "Volume loss Vl", "%", 1.0, step=0.05, param="volume_loss", min=0.1, max=4),
+        Input("K", "Trough width parameter K", "", 0.5, help="0.5 clays, 0.25–0.35 sands", step=0.05, param="K_trough", min=0.2, max=0.7),
         Input("y1", "Building near edge offset from axis y1", "m", 4), Input("y2", "Building far edge offset y2", "m", 24),
         Input("H", "Building height (to eaves)", "m", 9), Input("EG", "E/G ratio", "", 2.6, step=0.1),
     ]
@@ -208,7 +211,7 @@ class BeamAnalysis:
     description = "Closed-form elastic beam formulas (Roark). Combined loading is superposed. Deflection uses E·I. Use for lining segments, walers, struts and temporary works screening."
     inputs = [
         Input("support", "Support condition", "", 0, choices=[(0, "Simply supported"), (1, "Cantilever (fixed at left)"), (2, "Fixed both ends")]),
-        Input("L", "Span L", "m", 6), Input("w", "Uniform load w", "kN/m", 25), Input("P", "Point load P", "kN", 50), Input("a", "Point load position from left a", "m", 3),
+        Input("L", "Span L", "m", 6, param="beam_span", min=1, max=20), Input("w", "Uniform load w", "kN/m", 25, min=0, max=200), Input("P", "Point load P", "kN", 50, min=0, max=500), Input("a", "Point load position from left a", "m", 3, min=0, max=20),
         Input("E", "Elastic modulus E", "GPa", 30), Input("I", "Second moment of area I", "cm⁴", 50000),
     ]
 
@@ -270,8 +273,8 @@ class RCSection:
         "Ductility limit x/d ≤ 0.45; minimum steel 0.26·fctm/fyk·b·d ≥ 0.0013·b·d. Swap the partial factors for CSA A23.3 or ACI 318 if the project requires."
     )
     inputs = [
-        Input("b", "Width b", "mm", 1000, step=1), Input("h", "Depth h", "mm", 400, step=1), Input("cover", "Cover to bar centre", "mm", 50, step=1),
-        Input("fck", "Concrete fck", "MPa", 35, step=1), Input("fyk", "Steel fyk", "MPa", 500, step=1),
+        Input("b", "Width b", "mm", 1000, step=1, param="section_width", min=200, max=2000), Input("h", "Depth h", "mm", 400, step=1, param="section_depth", min=150, max=1500), Input("cover", "Cover to bar centre", "mm", 50, step=1, min=25, max=100),
+        Input("fck", "Concrete fck", "MPa", 35, step=1, param="fck", min=20, max=60), Input("fyk", "Steel fyk", "MPa", 500, step=1, param="fyk", min=400, max=600),
         Input("As", "Tension steel As (provided)", "mm²", 1570, step=1), Input("MEd", "Design moment M_Ed", "kNm", 180, step=1),
     ]
 
@@ -308,7 +311,7 @@ class CapacityCurve:
         "bare bending capacity, and check both the early-age (low fck) and long-term curves."
     )
     inputs = [
-        Input("b", "Width b", "mm", 1000, step=1), Input("h", "Thickness h", "mm", 300, step=1), Input("fck", "Concrete fck", "MPa", 30, step=1),
+        Input("b", "Width b", "mm", 1000, step=1, param="section_width", min=200, max=2000), Input("h", "Thickness h", "mm", 300, step=1, param="lining_thickness", min=100, max=800), Input("fck", "Concrete fck", "MPa", 30, step=1, param="fck", min=20, max=60),
         Input("As", "Steel per face As (0 for plain)", "mm²/face", 0, step=1), Input("cover", "Cover to bar centre", "mm", 50, step=1), Input("fyk", "Steel fyk", "MPa", 500, step=1),
         Input("N1", "Load point 1: N", "kN", 1200, step=1), Input("M1", "Load point 1: M", "kNm", 60, step=1),
         Input("N2", "Load point 2: N", "kN", 600, step=1), Input("M2", "Load point 2: M", "kNm", 90, step=1),
@@ -375,8 +378,8 @@ class FRSDesign:
         "by dosage, and verify on site with early-age panels."
     )
     inputs = [
-        Input("fLk", "Limit of proportionality fLk", "MPa", 4.5, step=0.1), Input("fR1k", "Residual strength fR1k (CMOD 0.5 mm)", "MPa", 2.5, step=0.1), Input("fR3k", "Residual strength fR3k (CMOD 2.5 mm)", "MPa", 2.0, step=0.1),
-        Input("h", "Lining thickness h", "mm", 250, step=5), Input("b", "Width considered b", "mm", 1000, step=1), Input("gammaF", "Partial factor γF", "", 1.5, step=0.05),
+        Input("fLk", "Limit of proportionality fLk", "MPa", 4.5, step=0.1, min=3, max=7), Input("fR1k", "Residual strength fR1k (CMOD 0.5 mm)", "MPa", 2.5, step=0.1, param="fR1k", min=0.5, max=6), Input("fR3k", "Residual strength fR3k (CMOD 2.5 mm)", "MPa", 2.0, step=0.1, param="fR3k", min=0.5, max=6),
+        Input("h", "Lining thickness h", "mm", 250, step=5, param="lining_thickness", min=100, max=600), Input("b", "Width considered b", "mm", 1000, step=1), Input("gammaF", "Partial factor γF", "", 1.5, step=0.05),
         Input("MEd", "Design moment M_Ed (per metre)", "kNm/m", 25, step=1), Input("energy", "Round panel energy at 40 mm (EN 14488-5)", "J", 800, step=10),
     ]
 

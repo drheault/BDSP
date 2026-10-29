@@ -35,6 +35,8 @@
       {% include "includes/field.html" with field=form.signature_name %}
       {% include "includes/field.html" with field=form.signature_title %}
     </div>
+    <h3 class="mt">Landing page</h3>
+    <div class="form-grid">{% include "includes/field.html" with field=form.landing_visual %}<div class="field"><label>Photo for the landing visual</label>{{ form.landing_photo }}{% if profile.landing_photo %}<div class="help">Current: {{ profile.landing_photo.name|cut:"branding/" }}</div>{% endif %}</div></div>
     <h3 class="mt">File server &amp; HCL Notes</h3>
     <div class="form-grid">
       {% include "includes/field.html" with field=form.smb_path_template extra_class="full" %}

@@ -104,6 +104,9 @@ class CompanyProfile(models.Model):
     )
     signature_name = models.CharField(max_length=120, blank=True, help_text="Default signatory (overridden by the proposal owner if set).")
     signature_title = models.CharField(max_length=120, blank=True, default="Partner")
+    LANDING_VISUALS = [("analysis_loop", "Design cycle: FE mesh → results → drawing → photo"), ("shotcrete", "Shotcrete layers on the SEM profile"), ("advance", "Advancing rings"), ("drawing_photo", "Drawing fading into the photo")]
+    landing_visual = models.CharField(max_length=20, choices=LANDING_VISUALS, default="analysis_loop")
+    landing_photo = models.ImageField(upload_to="branding/", blank=True, null=True, help_text="A real photo of one of our tunnels for the landing visual (wide, dark works best).")
     notes_server = models.CharField(max_length=200, blank=True, help_text="HCL Notes / Domino server (placeholder).")
     notes_database = models.CharField(max_length=200, blank=True, help_text="Notes database path, e.g. projects.nsf (placeholder).")
 
@@ -190,6 +193,9 @@ CAPABILITIES = [
     ("manage_integrations", "Timesheet / Notes / file-server connectors"),
     ("manage_users", "Create users and assign roles"),
     ("view_all_offices", "See every office's figures (not only your own office)"),
+    ("edit_profiles", "Edit other people's profiles (office, title, skills)"),
+    ("use_tools", "Use the calculation tools"),
+    ("view_projects", "See project sheets and the file server"),
 ]
 CAPABILITY_KEYS = [c[0] for c in CAPABILITIES]
 

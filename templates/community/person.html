@@ -2,7 +2,7 @@
 {% block title %}{{ person.get_full_name|default:person.username }}{% endblock %}
 {% block content %}
 <div class="page-head"><div class="row-flex">{% avatar person 72 %}<div><div class="crumbs"><a href="{% url 'people' %}">People</a> /</div><h1>{{ person.get_full_name|default:person.username }}</h1><div class="sub">{{ person.profile.title|default:"" }}{% if person.profile.office %} · {{ person.profile.office }}{% endif %}{% for r in person.access_roles.all %} · <span class="badge">{{ r.name }}</span>{% endfor %}</div></div></div>
-<div class="actions">{% if person == request.user %}<a class="btn" href="{% url 'my_profile' %}">{% include "includes/icons.html" with name="edit" %} Edit profile</a>{% endif %}{% if person.profile.linkedin %}<a class="btn" href="{{ person.profile.linkedin }}" target="_blank" rel="noopener">LinkedIn</a>{% endif %}</div></div>
+<div class="actions">{% if person == request.user %}<a class="btn" href="{% url 'my_profile' %}">{% include "includes/icons.html" with name="edit" %} Edit profile</a>{% elif can.edit_profiles %}<a class="btn" href="{% url 'person_edit' person.pk %}">{% include "includes/icons.html" with name="edit" %} Edit profile</a>{% endif %}{% if person.profile.linkedin %}<a class="btn" href="{{ person.profile.linkedin }}" target="_blank" rel="noopener">LinkedIn</a>{% endif %}</div></div>
 <div class="grid grid-3">
   <div class="span-2 stack">
     {% if person.profile.bio %}<div class="card"><div class="card-body">{{ person.profile.bio|linebreaks }}</div></div>{% endif %}

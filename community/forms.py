@@ -13,13 +13,16 @@ class CommentForm(forms.ModelForm):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ["avatar", "title", "office", "bio", "open_to_mentor", "looking_for_mentor", "linkedin"]
+        fields = ["avatar", "title", "office", "bio", "open_to_mentor", "looking_for_mentor", "linkedin", "notify_inapp", "notify_email"]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, can_change_office=True, **kwargs):
         super().__init__(*args, **kwargs)
         from core.models import Office
 
         self.fields["office"].queryset = Office.objects.filter(is_active=True)
+        if not can_change_office:
+            self.fields["office"].disabled = True
+            self.fields["office"].help_text = "Ask for a change with “Request a change” — a partner or administrator will apply it."
         widgets = {"bio": forms.Textarea(attrs={"rows": 4})}
 
 

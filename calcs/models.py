@@ -12,6 +12,7 @@ from tags.models import Taggable
 class Tool(Taggable):
     class Kind(models.TextChoices):
         BUILTIN = "builtin", "Built-in calculator"
+        SPEC = "spec", "No-code calculator (formulas)"
         UPLOAD = "upload", "Uploaded tool"
         LINK = "link", "External link"
 
@@ -29,6 +30,7 @@ class Tool(Taggable):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     runs = models.PositiveIntegerField(default=0)
+    spec = models.JSONField(default=dict, blank=True, help_text="For no-code tools: inputs, formulas, outputs, checks and chart (see Calculations → Build a tool).")
 
     class Meta:
         ordering = ["category", "name"]
@@ -40,7 +42,36 @@ class Tool(Taggable):
     def engine(self):
         from .engines import REGISTRY
 
+        if self.kind == "spec" and self.spec:
+            from .spec import SpecEngine
+
+            return SpecEngine(self)
         return REGISTRY.get(self.key)
+
+
+class ProjectParams(models.Model):
+    """Canonical parameters for a proposal/project, shared by every tool."""
+
+    proposal = models.OneToOneField("proposals.Proposal", on_delete=models.CASCADE, related_name="params")
+    values = models.JSONField(default=dict, blank=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Parameters for {self.proposal}"
+
+
+class ToolState(models.Model):
+    """A user's last inputs for a tool (auto-saved as they type)."""
+
+    tool = models.ForeignKey(Tool, on_delete=models.CASCADE, related_name="states")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tool_states")
+    proposal = models.ForeignKey("proposals.Proposal", on_delete=models.SET_NULL, null=True, blank=True)
+    inputs = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("tool", "user")]
 
 
 class CalcRun(models.Model):

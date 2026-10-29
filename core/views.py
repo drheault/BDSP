@@ -462,7 +462,13 @@ def landing(request):
         return dashboard(request)
     from .models import Office
 
-    return render(request, "core/landing.html", {"offices": Office.objects.filter(is_active=True)})
+    visual = request.GET.get("visual")
+    c = CompanyProfile.get_solo()
+    ctx = {"offices": Office.objects.filter(is_active=True), "landing_photo": c.landing_photo.url if c.landing_photo else ""}
+    if visual in dict(CompanyProfile.LANDING_VISUALS):  # preview a visual without saving: /?visual=advance
+        c.landing_visual = visual
+        ctx["company"] = c
+    return render(request, "core/landing.html", ctx)
 
 
 @login_required

@@ -8,6 +8,8 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from core.permissions import has_cap
+
 from .forms import CommentForm, EndorsementForm, ProfileForm, RatingForm, UserSkillForm
 from .models import Comment, Endorsement, MentorMatch, Profile, Rating, Reaction, Skill, UserSkill, suggest_mentors
 
@@ -116,31 +118,55 @@ def person(request, pk):
     })
 
 
-@login_required
-def my_profile(request):
-    profile, _ = Profile.objects.get_or_create(user=request.user)
-    form = ProfileForm(request.POST or None, request.FILES or None, instance=profile)
+def _profile_form_view(request, target, template="community/profile_form.html"):
+    """Shared by 'my profile' and 'edit someone's profile'. Office is locked unless the editor may edit profiles."""
+    profile, _ = Profile.objects.get_or_create(user=target)
+    may_edit_others = has_cap(request, "edit_profiles") or request.user.is_superuser
+    form = ProfileForm(request.POST or None, request.FILES or None, instance=profile, can_change_office=may_edit_others)
     if request.method == "POST" and form.is_valid():
         form.save()
         for f in ("first_name", "last_name", "email"):
             if f in request.POST:
-                setattr(request.user, f, request.POST[f])
-        request.user.save()
+                setattr(target, f, request.POST[f])
+        target.save()
         messages.success(request, "Profile saved.")
-        return redirect("person", pk=request.user.pk)
-    return render(request, "community/profile_form.html", {"form": form, "profile": profile, "skill_form": UserSkillForm(), "skills": request.user.skills.select_related("skill")})
+        return redirect("person", pk=target.pk)
+    from core.models import Office
+
+    from tickets.models import RequestKind
+
+    pk_kind = RequestKind.objects.filter(key="profile").values_list("pk", flat=True).first()
+    return render(request, template, {"form": form, "profile": profile, "target": target, "is_self": target.pk == request.user.pk, "may_edit_others": may_edit_others, "profile_kind_id": pk_kind,
+                                      "skill_form": UserSkillForm(), "skills": target.skills.select_related("skill"), "offices": Office.objects.filter(is_active=True)})
+
+
+@login_required
+def my_profile(request):
+    return _profile_form_view(request, request.user)
+
+
+@login_required
+def person_edit(request, pk):
+    target = get_object_or_404(User, pk=pk)
+    if target.pk != request.user.pk and not (has_cap(request, "edit_profiles") or request.user.is_superuser):
+        messages.error(request, "You can edit your own profile; ask a partner or administrator to change someone else's, or raise a request.")
+        return redirect("person", pk=pk)
+    return _profile_form_view(request, target)
 
 
 @login_required
 @require_POST
 def skill_add(request):
+    target = request.user
+    if request.GET.get("user") and (has_cap(request, "edit_profiles") or request.user.is_superuser):
+        target = get_object_or_404(User, pk=request.GET["user"])
     form = UserSkillForm(request.POST)
     if form.is_valid():
-        UserSkill.objects.update_or_create(user=request.user, skill=form.cleaned_data["skill"], defaults={"self_level": form.cleaned_data["self_level"], "is_learning": form.cleaned_data["is_learning"], "note": form.cleaned_data["note"]})
+        UserSkill.objects.update_or_create(user=target, skill=form.cleaned_data["skill"], defaults={"self_level": form.cleaned_data["self_level"], "is_learning": form.cleaned_data["is_learning"], "note": form.cleaned_data["note"]})
         messages.success(request, "Skill saved.")
     else:
         messages.error(request, form.errors.as_text())
-    return redirect("my_profile")
+    return redirect("my_profile" if target == request.user else "person_edit", *([] if target == request.user else [target.pk]))
 
 
 @login_required

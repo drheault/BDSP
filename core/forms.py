@@ -16,6 +16,7 @@ class CompanyProfileForm(forms.ModelForm):
             "number_digits", "sequence_start", "bd_number_format", "phase_number_format", "require_project_number_when_won",
             "smb_path_template", "notes_server", "notes_database",
             "proposal_terms", "capabilities_statement", "signature_name", "signature_title",
+            "landing_visual", "landing_photo",
         ]
         widgets = {
             "address": forms.Textarea(attrs={"rows": 3}),

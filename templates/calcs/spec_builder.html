@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% load tagchips %}
+{% block title %}Build a tool{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'tool_list' %}">Calculations &amp; tools</a> /</div><h1>{% if tool %}Edit {{ tool.name }}{% else %}Build a tool{% endif %}</h1><div class="sub">A no-code calculator: name the inputs, write the formulas, choose what to show. It runs live with sliders, links to project parameters, and can be rated and discussed like every tool.</div></div></div>
+{% tag_datalist_tag %}
+<div class="grid grid-3">
+  <div class="span-2"><div class="card"><div class="card-body"><form method="post">{% csrf_token %}
+    <div class="form-grid">{% include "includes/field.html" with field=form.name %}{% include "includes/field.html" with field=form.category %}{% include "includes/field.html" with field=form.summary extra_class="full" %}{% include "includes/field.html" with field=form.description extra_class="full" %}{% include "includes/field.html" with field=form.tags extra_class="full" %}{% include "includes/field.html" with field=form.version %}</div>
+    <div class="mt">{% include "includes/field.html" with field=form.spec_text %}</div>
+    <div class="form-actions"><button class="btn btn-primary">{% if tool %}Save changes{% else %}Publish tool{% endif %}</button><a class="btn btn-ghost" href="{% url 'tool_list' %}">Cancel</a></div></form></div></div></div>
+  <div class="stack">
+    <div class="card"><div class="card-body"><h3>How it works</h3>
+      <p class="muted"><strong>inputs</strong>: name, label, unit, default, optional min/max (gives a slider) and <code>param</code> to link a project parameter.<br><strong>formulas</strong>: evaluated in order; use earlier names, <code>**</code> for powers, and <code>sqrt, sin, cos, tan, atan, exp, log, abs, min, max, pi</code>.<br><strong>outputs</strong>: which names to show, with label, unit and decimals.<br><strong>checks</strong>: boolean expressions shown as pass/fail.<br><strong>chart</strong>: sweep a variable over a range and plot series expressions.<br><strong>headline</strong>: text with <code>{name}</code> placeholders.</p>
+      <p class="muted">Formulas are checked before publishing: no file, network or Python access is possible, only arithmetic.</p></div></div>
+    <div class="card"><div class="card-body"><h3>Project parameter keys</h3><div class="muted" style="columns:2;font-size:.85rem">{% for k, l, u, g in params %}<div><code>{{ k }}</code></div>{% endfor %}</div></div></div>
+  </div>
+</div>
+{% endblock %}

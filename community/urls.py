@@ -10,6 +10,7 @@ urlpatterns = [
     path("rate/<int:ct_id>/<int:obj_id>/", views.rate, name="rate"),
     path("people/", views.people, name="people"),
     path("people/<int:pk>/", views.person, name="person"),
+    path("people/<int:pk>/edit/", views.person_edit, name="person_edit"),
     path("people/<int:pk>/endorse/", views.endorse, name="endorse"),
     path("people/<int:pk>/mentor/", views.mentor_propose, name="mentor_propose"),
     path("mentoring/<int:pk>/<str:action>/", views.mentor_respond, name="mentor_respond"),

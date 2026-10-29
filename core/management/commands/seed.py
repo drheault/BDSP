@@ -88,12 +88,22 @@ ROLES_ACCESS = [
     # name, rank, description, capabilities
     ("Partners", 10, "Full access including costs, numbering, phases and settings.", "ALL"),
     ("Associates", 20, "Run pursuits: proposals, fees, schedules, decide won/lost, assign numbers, see costs and actuals.",
-     ["view_proposals", "edit_proposals", "approve_won", "change_phase", "view_costs", "view_actuals", "edit_actuals", "view_metrics", "manage_projects_library"]),
-    ("Engineers", 30, "Write proposals and estimates; no costs, no decisions.", ["view_proposals", "edit_proposals", "view_actuals", "manage_projects_library"]),
-    ("HR-Global", 40, "People, rates and users across offices.", ["view_proposals", "view_costs", "edit_rates", "manage_users", "view_actuals", "edit_actuals"]),
-    ("HR-Local", 45, "People and timesheets for the local office.", ["view_proposals", "edit_rates", "view_actuals", "edit_actuals"]),
-    ("IT", 60, "Settings, integrations and user accounts.", ["view_proposals", "manage_settings", "manage_integrations", "manage_users"]),
-    ("Admins", 90, "Office administration: settings, users, templates.", ["view_proposals", "manage_settings", "manage_users", "manage_projects_library"]),
+     ["view_proposals", "edit_proposals", "approve_won", "change_phase", "view_costs", "view_actuals", "edit_actuals", "view_metrics", "manage_projects_library", "use_tools", "view_projects", "edit_profiles"]),
+    ("Engineers", 30, "Write proposals and estimates; no costs, no decisions.", ["view_proposals", "edit_proposals", "view_actuals", "manage_projects_library", "use_tools", "view_projects"]),
+    ("Tool users", 35, "Calculation tools only (e.g. site staff, students, externals).", ["use_tools"]),
+    ("HR-Global", 40, "People, rates and users across offices.", ["view_proposals", "view_costs", "edit_rates", "manage_users", "view_actuals", "edit_actuals", "edit_profiles", "view_all_offices"]),
+    ("HR-Local", 45, "People and timesheets for the local office.", ["view_proposals", "edit_rates", "view_actuals", "edit_actuals", "edit_profiles"]),
+    ("IT", 60, "Settings, integrations and user accounts.", ["view_proposals", "manage_settings", "manage_integrations", "manage_users", "manage_forms", "use_tools"]),
+    ("Admins", 90, "Office administration: settings, users, templates.", ["view_proposals", "manage_settings", "manage_users", "manage_projects_library", "manage_forms", "edit_profiles", "use_tools", "view_projects"]),
+]
+
+REQUEST_KINDS = [
+    # key, name, description, handling role
+    ("access", "Access & permissions", "A role, a capability, or access to a page you cannot see.", "IT"),
+    ("profile", "Profile change", "Office, title or other profile details you cannot change yourself.", "HR-Global"),
+    ("data", "Data correction", "A wrong number, client, rate or project detail.", "Admins"),
+    ("feature", "Feature idea", "Something TunnelVision should do.", "IT"),
+    ("bug", "Bug", "Something broken, with steps to reproduce.", "IT"),
 ]
 
 # Key staff from dr-sauer.com (Key Staff / Meet the Team). Email rule: first initial + last name @dr-sauer.com.
@@ -101,7 +111,7 @@ STAFF = [
     # username, first, last, title, office code, access role, staff role, superuser
     ("gsauer", "Gerhard", "Sauer", "Senior Partner", "DSP-Salzburg", "Partners", "Principal", False),
     ("jlaubbichler", "Juergen", "Laubbichler", "Managing Director & Partner", "DSP-Salzburg", "Partners", "Principal", False),
-    ("gskalla", "Gerald", "Skalla", "Managing Director & Partner", "DSP-London", "Partners", "Principal", False),
+    ("gskalla", "Gerald", "Skalla", "Managing Director & Partner", "DSP-Toronto", "Partners", "Principal", False),
     ("blyons", "Brian", "Lyons", "Managing Director & Partner", "DSP-London", "Partners", "Principal", False),
     ("tschwind", "Thomas", "Schwind", "Technical Director & Partner", "DSP-London", "Partners", "Principal", False),
     ("afeiersinger", "Andreas", "Feiersinger", "Operations Director & Partner", "DSP-London", "Partners", "Principal", False),
@@ -289,7 +299,14 @@ class Command(BaseCommand):
         from core.models import CAPABILITY_KEYS
 
         for name, rank, desc, caps in ROLES_ACCESS:
-            AccessRole.objects.get_or_create(name=name, defaults={"rank": rank, "description": desc, "capabilities": CAPABILITY_KEYS if caps == "ALL" else caps, "is_system": True})
+            role, created = AccessRole.objects.get_or_create(name=name, defaults={"rank": rank, "description": desc, "capabilities": CAPABILITY_KEYS if caps == "ALL" else caps, "is_system": True})
+            if not created and caps == "ALL":
+                role.capabilities = CAPABILITY_KEYS
+                role.save()
+        from tickets.models import RequestKind
+
+        for i, (key, name, desc, role_name) in enumerate(REQUEST_KINDS):
+            RequestKind.objects.get_or_create(key=key, defaults={"name": name, "description": desc, "handled_by": AccessRole.objects.filter(name=role_name).first(), "order": i})
         self.stdout.write(f"Regions: {Region.objects.count()}, access roles: {AccessRole.objects.count()}")
 
         for i, (cat, (weight, color, names)) in enumerate(TAGS.items()):
@@ -305,6 +322,10 @@ class Command(BaseCommand):
         self.stdout.write(f"Offices: {Office.objects.count()}, news sources: {NewsSource.objects.count()}")
 
         ensure_builtins()
+        from calcs.models import Tool as _Tool
+        from calcs.spec import EXAMPLE_SPEC
+
+        _Tool.objects.get_or_create(key="waler-udl", defaults={"name": "Waler under uniform load", "kind": "spec", "category": "Temporary works", "summary": "Example no-code tool: moment and shear for a simply supported waler.", "description": "Built with the tool builder: M = wL²/8, V = wL/2. Edit it or copy it as a starting point.", "spec": EXAMPLE_SPEC, "version": "1.0"})
         for name, purpose, phases, path, tpl, order in (
             ("Projects (dc120)", "projects", "CDE", r"\\dc120\projects", "{country}/{project_number}", 0),
             ("Business development (dc120)", "bd", "B", r"\\dc120\Business Development", "{country}/B-{region}/B-{region}{seq4}", 1),
@@ -390,7 +411,7 @@ class Command(BaseCommand):
         tor, lon_, slz = Office.objects.get(code="DSP-Toronto"), Office.objects.get(code="DSP-London"), Office.objects.get(code="DSP-Salzburg")
         AccessRole.objects.get(name="Partners").capabilities = AccessRole.objects.get(name="Partners").capabilities  # noqa
         for u, title, office, have, learning in (
-            (lead1, None, lon_, [("SEM / NATM design", 5), ("Cavern design", 5), ("Proposal writing", 5), ("Client relations", 5), ("Mentoring", 4)], []),
+            (lead1, None, tor, [("SEM / NATM design", 5), ("Cavern design", 5), ("Proposal writing", 5), ("Client relations", 5), ("Mentoring", 4)], []),
             (lead2, None, tor, [("Segmental lining design", 4), ("Fee estimating", 4), ("Numerical modelling (FE/FD)", 4), ("Plaxis", 4), ("Project management", 4)], ["Cavern design"]),
             (eng, "Engineer (demo account)", tor, [("Numerical modelling (FE/FD)", 2), ("Plaxis", 3), ("Settlement & building damage assessment", 2)], ["SEM / NATM design", "Fee estimating", "Face stability"]),
         ):

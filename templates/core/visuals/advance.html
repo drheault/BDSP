@@ -1,0 +1,14 @@
+<figure class="l-tunnel" aria-label="Tunnel advancing ring by ring toward the viewer">
+  <svg viewBox="-760 -560 1520 1120" preserveAspectRatio="xMidYMid meet">
+    <rect x="-760" y="-560" width="1520" height="1120" fill="#07080a"/>
+    <defs><radialGradient id="deep" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#1d2229"/><stop offset="1" stop-color="#07080a"/></radialGradient></defs>
+    <rect x="-760" y="-560" width="1520" height="1120" fill="url(#deep)"/>
+    <g fill="none" stroke="#e3a725">{% for i in "0123456789ab" %}<path class="ring" style="--i:{{ forloop.counter0 }}" d="M-480 300 A760 760 0 0 1 -560 -40 A560 560 0 0 1 560 -40 A760 760 0 0 1 480 300 A1500 1500 0 0 1 -480 300 Z" stroke-width="2"/>{% endfor %}</g>
+    <g stroke="#9aa0a6" stroke-opacity=".35" stroke-width="2"><path d="M-520 320 L-70 20"/><path d="M520 320 L70 20"/></g>
+  </svg>
+</figure>
+<style>
+.ring { transform-origin: 0 40px; animation: adv 16s linear infinite; animation-delay: calc(var(--i) * -1.333s); opacity: 0; }
+@keyframes adv { 0% { transform: scale(.06); opacity: 0 } 12% { opacity: .9 } 90% { opacity: .35 } 100% { transform: scale(1.35); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .ring { animation: none; opacity: .5; transform: scale(calc(.2 + var(--i) * .09)) } }
+</style>
