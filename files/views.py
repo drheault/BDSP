@@ -88,16 +88,15 @@ def upload(request, root_id):
 
 
 def _project_rel(root, proposal):
-    tpl = root.project_folder_template or "{project_number}"
-    return tpl.format(project_number=proposal.project_number or proposal.number, phase=proposal.phase, phase_name=proposal.phase_name, region=proposal.region.code if proposal.region_id else "", seq=proposal.sequence or "").strip("/")
+    return root.relative_folder(proposal)
 
 
 @login_required
 def project_folder(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
-    root = FileRoot.objects.filter(is_active=True).first()
+    root = FileRoot.for_proposal(proposal) or FileRoot.objects.filter(is_active=True).first()
     if not root:
-        messages.error(request, "No file root is configured. Add one under Files.")
+        messages.error(request, "No file location is configured. Add one under File server.")
         return redirect("proposal_records", pk=pk)
     return redirect("file_browse", root_id=root.pk, rel=_project_rel(root, proposal))
 
@@ -108,7 +107,8 @@ def project_folder(request, pk):
 def sync_project(request, pk):
     """Index the project's folder: every file becomes a ProjectRecord (by subfolder name), once."""
     proposal = get_object_or_404(Proposal, pk=pk)
-    root = get_object_or_404(FileRoot, pk=request.POST.get("root") or FileRoot.objects.filter(is_active=True).values_list("pk", flat=True).first())
+    default_root = FileRoot.for_proposal(proposal)
+    root = get_object_or_404(FileRoot, pk=request.POST.get("root") or (default_root.pk if default_root else FileRoot.objects.filter(is_active=True).values_list("pk", flat=True).first()))
     rel = _project_rel(root, proposal)
     log = SyncLog.objects.create(root=root, proposal=proposal, user=request.user)
     seen, created = 0, 0

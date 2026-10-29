@@ -56,7 +56,7 @@ class CurrencyForm(forms.ModelForm):
 class RegionForm(forms.ModelForm):
     class Meta:
         model = Region
-        fields = ["code", "name", "kind", "is_active"]
+        fields = ["code", "name", "kind", "country", "is_active"]
 
 
 class AccessRoleForm(forms.ModelForm):

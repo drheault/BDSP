@@ -475,3 +475,20 @@ def landing(request):
     from proposals.models import Service
 
     return render(request, "core/landing.html", {"services": Service.objects.filter(is_active=True)[:9]})
+
+
+@login_required
+@require_POST
+def view_as(request):
+    """Admins preview the app as a role; the panel keeps a way back."""
+    real = __import__("core.models", fromlist=["user_capabilities"]).user_capabilities(request.user)
+    if "manage_users" not in real and not request.user.is_superuser:
+        messages.error(request, "Only administrators can preview as a role.")
+        return redirect(request.POST.get("next") or "/")
+    role = request.POST.get("role")
+    if role:
+        request.session["view_as_role"] = int(role)
+        messages.info(request, "Previewing as a role. Open the configuration panel to go back to your own access.")
+    else:
+        request.session.pop("view_as_role", None)
+    return redirect(request.POST.get("next") or "/")

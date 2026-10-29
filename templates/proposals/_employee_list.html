@@ -1,5 +1,5 @@
 {% load bdsp %}
-<table class="tbl"><thead><tr><th>Name</th><th>Role</th><th class="num">Rate / h</th>{% if can.view_costs %}<th class="num">Cost / h</th>{% endif %}<th>Ext. ID</th><th></th></tr></thead><tbody>
+<table class="tbl"><thead><tr><th>Name</th><th>Role</th><th class="num">Rate / h</th>{% if can.view_costs %}<th class="num cost-col">Cost / h</th>{% endif %}<th>Ext. ID</th><th></th></tr></thead><tbody>
 {% for employee in employees %}{% include "proposals/_employee_row.html" %}{% empty %}<tr><td colspan="6" class="muted">No employees yet — add people so estimates can be built per person.</td></tr>{% endfor %}
 </tbody></table>
 <div class="add-bar"><details class="reveal" {% if employee_form.errors %}open{% endif %}><summary><span class="btn btn-sm">{% include "includes/icons.html" with name="plus" %} Add employee</span></summary><div class="reveal-body"><form hx-post="{% url 'employee_add' %}" hx-target="#employees" class="inline-form">

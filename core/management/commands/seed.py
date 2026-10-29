@@ -229,6 +229,16 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         User = get_user_model()
         company = CompanyProfile.get_solo()
+        if not company.logo:
+            from django.conf import settings as dj
+            from django.core.files import File
+
+            logo = dj.BASE_DIR / "static" / "img" / "logo-drsauer.png"
+            if logo.exists():
+                with open(logo, "rb") as f:
+                    company.logo.save("logo-drsauer.png", File(f), save=False)
+                company.primary_color, company.accent_color = "#1b3a5c", "#e3a725"
+                company.save()
         self.stdout.write(f"Company profile: {company.name}")
 
         if not opts["no_admin"] and not User.objects.exists():
@@ -242,9 +252,10 @@ class Command(BaseCommand):
             company.save()
         self.stdout.write(f"Currencies: {Currency.objects.count()} (default {company.default_currency})")
 
+        country_of = {"province": "canada", "state": "usa", "country": None}
         for kind, rows in REGIONS:
             for code, name in rows:
-                Region.objects.get_or_create(code=code, defaults={"name": name, "kind": kind})
+                Region.objects.get_or_create(code=code, defaults={"name": name, "kind": kind, "country": country_of[kind] or name.lower().replace(" ", "-")})
         from core.models import CAPABILITY_KEYS
 
         for name, rank, desc, caps in ROLES_ACCESS:
@@ -258,7 +269,12 @@ class Command(BaseCommand):
         for name, cat in SKILLS:
             Skill.objects.get_or_create(name=name, defaults={"category": cat})
         ensure_builtins()
-        FileRoot.objects.get_or_create(name="Project share", defaults={"kind": "mount", "path": "/mnt/projects", "project_folder_template": "{phase_name}/{project_number}"})
+        for name, purpose, phases, path, tpl, order in (
+            ("Projects (dc120)", "projects", "CDE", r"\\dc120\projects", "{country}/{project_number}", 0),
+            ("Business development (dc120)", "bd", "B", r"\\dc120\Business Development", "{country}/B-{region}/B-{region}{seq4}", 1),
+            ("Printed material · project sheets (dc120)", "sheets", "", r"\\dc120\Administration\canada\printed material\project sheets", "", 2),
+        ):
+            FileRoot.objects.get_or_create(name=name, defaults={"purpose": purpose, "phases": phases, "kind": "smb", "path": path, "project_folder_template": tpl, "order": order})
         self.stdout.write(f"Tags: {Tag.objects.count()} in {TagCategory.objects.count()} categories, skills: {Skill.objects.count()}, tools: {__import__('calcs.models', fromlist=['Tool']).Tool.objects.count()}")
 
         # tag the service catalogue

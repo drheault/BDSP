@@ -1,7 +1,7 @@
 {% load bdsp %}
 <div class="page-head">
   <div><div class="crumbs"><a href="{% url 'proposal_list' %}">Proposals</a> / <span class="mono">{{ proposal.number }}</span>{% if proposal.project_number %} · project <span class="mono"><strong>{{ proposal.project_number }}</strong></span> <span class="badge badge-{% if proposal.phase == 'B' %}lead{% elif proposal.phase == 'C' %}drafting{% elif proposal.phase == 'D' %}review{% else %}construction{% endif %}" title="{{ proposal.phase_name }}">Phase {{ proposal.phase }}</span>{% endif %}</div>
-    <h1>{{ proposal.title }}</h1>
+    <h1 data-id="{{ proposal.pk }}">{{ proposal.title }}</h1>
     <div class="sub">{% if proposal.client %}<a href="{% url 'client_detail' proposal.client.pk %}">{{ proposal.client }}</a>{% else %}No client{% endif %}{% if proposal.contact %} · {{ proposal.contact.name }}{% endif %} · <span class="badge badge-{{ proposal.service_type }}">{{ proposal.get_service_type_display }}</span> · {{ proposal.cur.code }}{% if proposal.due_date %} · due {{ proposal.due_date|date:"j M Y" }}{% if proposal.is_open %} (<span class="{% if proposal.days_to_due < 0 %}due-bad{% elif proposal.days_to_due <= 7 %}due-warn{% endif %}">{{ proposal.days_to_due }} d</span>){% endif %}{% endif %}{% if proposal.status == "won" and proposal.project_status %} · <span class="badge badge-won">{{ proposal.get_project_status_display }}</span>{% endif %}</div>
   </div>
   <div class="actions">

@@ -33,5 +33,6 @@ urlpatterns = [
     path("settings/appearance/<int:pk>/activate/", views.theme_activate, name="theme_activate"),
     path("settings/appearance/<int:pk>/delete/", views.theme_delete, name="theme_delete"),
     path("settings/appearance/<int:pk>/export/", views.theme_export, name="theme_export"),
+    path("view-as/", views.view_as, name="view_as"),
     path("metrics/", views.metrics, name="metrics"),
 ]

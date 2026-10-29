@@ -246,8 +246,15 @@ class Proposal(Taggable):
 
     @property
     def smb_path(self):
+        if not self.project_number:
+            return ""
+        from files.models import FileRoot
+
+        root = FileRoot.for_proposal(self)
+        if root:
+            return root.full_path(self)
         tpl = CompanyProfile.get_solo().smb_path_template
-        if not tpl or not self.project_number:
+        if not tpl:
             return ""
         return tpl.format(project_number=self.project_number, phase=self.phase, phase_name=self.phase_name, region=self.region.code if self.region_id else "", seq=self.sequence)
 

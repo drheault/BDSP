@@ -1,0 +1,45 @@
+{% if is_privileged %}
+<button type="button" class="cfg-btn" onclick="document.getElementById('cfg').showModal()" title="Configuration & view options" aria-label="Configuration"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>{% if view_as %}<span class="cfg-dot" title="Previewing as {{ view_as.name }}"></span>{% endif %}</button>
+<dialog id="cfg" class="cfg">
+  <form method="dialog" class="cfg-close"><button class="btn btn-icon btn-ghost" aria-label="Close">✕</button></form>
+  <h2>Configuration</h2>
+  <p class="muted">Your access, what you are previewing, and display options. Changes here are yours only, except “Preview as role”, which follows your session.</p>
+  <div class="cfg-grid">
+    <section>
+      <h3>View</h3>
+      <label class="cfg-row"><span>Edit mode</span><span class="switch"><input type="checkbox" id="cfg-edit" onchange="cfgSet('bdsp-editmode', this.checked ? '' : 'off', 'data-editmode')"><i></i></span></label>
+      <div class="help">Off hides every add, edit, delete and menu control for a clean reading view.</div>
+      <label class="cfg-row"><span>Show internal costs</span><span class="switch"><input type="checkbox" id="cfg-costs" onchange="cfgSet('bdsp-costs', this.checked ? '' : 'hide', 'data-costs')"><i></i></span></label>
+      <label class="cfg-row"><span>Compact density</span><span class="switch"><input type="checkbox" id="cfg-dense" onchange="cfgSet('bdsp-density', this.checked ? 'compact' : '', 'data-density')"><i></i></span></label>
+      <label class="cfg-row"><span>Show record IDs</span><span class="switch"><input type="checkbox" id="cfg-ids" onchange="cfgSet('bdsp-ids', this.checked ? 'show' : '', 'data-ids')"><i></i></span></label>
+      <div class="cfg-row"><span>Appearance</span><span class="group"><button type="button" class="btn btn-xs" onclick="setMode('dark')">Dark</button><button type="button" class="btn btn-xs" onclick="setMode('light')">Light</button></span></div>
+      <div class="cfg-row"><span>Text size</span><span class="group"><button type="button" class="btn btn-xs" onclick="setText('')">Normal</button><button type="button" class="btn btn-xs" onclick="setText('large')">Large</button><button type="button" class="btn btn-xs" onclick="setText('xlarge')">Larger</button></span></div>
+      <div class="cfg-row"><span>Sidebar</span><span class="group"><button type="button" class="btn btn-xs" onclick="toggleSidebar()">Collapse / expand</button></span></div>
+    </section>
+    <section>
+      <h3>Access</h3>
+      {% if view_as %}<div class="callout warn mb">Previewing as <strong>{{ view_as.name }}</strong>. <form method="post" action="{% url 'view_as' %}" style="display:inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button class="btn btn-xs btn-primary">Back to my access</button></form></div>{% endif %}
+      {% if config_roles %}<form method="post" action="{% url 'view_as' %}" class="row-flex mb">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><select name="role" style="width:auto"><option value="">Preview as role…</option>{% for r in config_roles %}<option value="{{ r.pk }}" {% if view_as and view_as.pk == r.pk %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select><button class="btn btn-xs">Go</button></form>{% endif %}
+      <ul class="cfg-caps">{% for key, label in capability_labels %}<li class="{% if key in caps %}on{% endif %}"><span>{% if key in caps %}✔{% else %}·{% endif %}</span>{{ label }}</li>{% endfor %}</ul>
+    </section>
+    <section>
+      <h3>Shortcuts</h3>
+      <div class="cfg-links">
+        {% if real_caps and "manage_forms" in real_caps or user.is_superuser %}<a href="{% url 'form_builder_home' %}">Form builder</a>{% endif %}
+        {% if "manage_settings" in real_caps or user.is_superuser %}<a href="{% url 'appearance' %}">Appearance</a><a href="{% url 'company_settings' %}">Company settings</a><a href="{% url 'tag_index' %}">Tags</a>{% endif %}
+        {% if "manage_users" in real_caps or user.is_superuser %}<a href="{% url 'roles' %}">Roles &amp; permissions</a><a href="{% url 'users' %}">Users</a>{% endif %}
+        {% if "manage_integrations" in real_caps or user.is_superuser %}<a href="{% url 'integrations' %}">Integrations</a><a href="{% url 'file_home' %}">File locations</a>{% endif %}
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Django admin</a>{% endif %}
+      </div>
+    </section>
+  </div>
+</dialog>
+<script>
+  function cfgSet(key, val, attr){ try{ if(val){localStorage.setItem(key,val); document.documentElement.setAttribute(attr,val);} else {localStorage.removeItem(key); document.documentElement.removeAttribute(attr);} }catch(e){} }
+  (function(){ try{ var h=document.documentElement;
+    document.getElementById("cfg-edit").checked = localStorage.getItem("bdsp-editmode")!=="off";
+    document.getElementById("cfg-costs").checked = localStorage.getItem("bdsp-costs")!=="hide";
+    document.getElementById("cfg-dense").checked = localStorage.getItem("bdsp-density")==="compact";
+    document.getElementById("cfg-ids").checked = localStorage.getItem("bdsp-ids")==="show"; }catch(e){} })();
+</script>
+{% endif %}

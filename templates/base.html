@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}BDSP{% endblock %} · {{ company.name|default:"BDSP" }}</title>
-  <link rel="icon" href="{% if company and company.logo %}{{ company.logo.url }}{% else %}{% static 'img/logo-default.svg' %}{% endif %}">
+  <link rel="icon" href="{% if company and company.logo %}{{ company.logo.url }}{% else %}{% static 'img/logo-drsauer.png' %}{% endif %}">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% if theme_css %}<style id="theme-css">{{ theme_css|safe }}</style>{% elif company %}<style>:root{--navy:{{ company.primary_color }};--accent:{{ company.accent_color }};}</style>{% endif %}
-  <script>(function(){try{var h=document.documentElement,t=localStorage.getItem("bdsp-text");if(t)h.setAttribute("data-text",t);var m=localStorage.getItem("bdsp-mode")||"{{ theme_mode|default:'dark' }}";h.setAttribute("data-mode",m);if(localStorage.getItem("bdsp-sidebar")==="collapsed")h.setAttribute("data-sidebar","collapsed");var w=localStorage.getItem("bdsp-sidebar-w");if(w)h.style.setProperty("--sidebar-w",w+"px")}catch(e){}})()</script>
+  <script>(function(){try{var h=document.documentElement,t=localStorage.getItem("bdsp-text");if(t)h.setAttribute("data-text",t);var m=localStorage.getItem("bdsp-mode")||"{{ theme_mode|default:'dark' }}";h.setAttribute("data-mode",m);if(localStorage.getItem("bdsp-sidebar")==="collapsed")h.setAttribute("data-sidebar","collapsed");var w=localStorage.getItem("bdsp-sidebar-w");if(w)h.style.setProperty("--sidebar-w",w+"px");["bdsp-editmode:data-editmode","bdsp-costs:data-costs","bdsp-density:data-density","bdsp-ids:data-ids"].forEach(function(p){var k=p.split(":"),v=localStorage.getItem(k[0]);if(v)h.setAttribute(k[1],v)})}catch(e){}})()</script>
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <script>if(!window.htmx){document.write('<script src="{% static 'js/htmx.min.js' %}"><\/script>')}</script>
   {% block head %}{% endblock %}
@@ -20,7 +20,7 @@
     <button type="button" class="sb-toggle" onclick="toggleSidebar()" title="Collapse / expand menu" aria-label="Collapse menu">{% include "includes/icons.html" with name="left" %}</button>
     <div class="sb-resize" id="sb-resize" title="Drag to resize"></div>
     <a class="brand" href="{% url 'dashboard' %}">
-      {% if company and company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }} logo">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="logo">{% endif %}
+      {% if company and company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }} logo">{% else %}<img src="{% static 'img/logo-drsauer.png' %}" alt="logo">{% endif %}
       <span><span class="name">{{ company.name|default:"BDSP" }}</span><br><span class="tag">{{ company.tagline|default:"Business development" }}</span></span>
     </a>
     {% with url_name=request.resolver_match.url_name %}
@@ -72,8 +72,10 @@
     </div>
   </aside>
   <main class="main">
+    {% if view_as %}<div class="callout warn mb row-flex"><span>Previewing as <strong>{{ view_as.name }}</strong> — this is what that role sees.</span><span class="spacer"></span><form method="post" action="{% url 'view_as' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button class="btn btn-xs">Back to my access</button></form></div>{% endif %}
     {% block content %}{% endblock %}
   </main>
+  {% include "includes/config_panel.html" %}
 </div>
 {% endblock %}
 {% if messages %}

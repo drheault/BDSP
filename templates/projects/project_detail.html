@@ -7,7 +7,7 @@
 <details class="menu"><summary class="btn btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><form method="post" action="{% url 'project_delete' project.pk %}" data-confirm="Delete this project sheet and its images?">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete project sheet</button></form></div></details>{% endif %}</div></div>
 
 <article class="doc">
-  <header class="cover"><div>{% if company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }}">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt=""><b style="color:var(--doc-primary)"> {{ company.name }}</b>{% endif %}</div><div class="co"><b>Project sheet</b>
+  <header class="cover"><div>{% if company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }}">{% else %}<img src="{% static 'img/logo-drsauer.png' %}" alt=""><b style="color:var(--doc-primary)"> {{ company.name }}</b>{% endif %}</div><div class="co"><b>Project sheet</b>
 {{ project.get_kind_display }}</div></header>
   {% if project.cover %}<div class="hero mb"><img src="{{ project.cover.image.url }}" alt="{{ project.cover.caption|default:project.name }}"></div>{% endif %}
   <div class="title-block" style="margin-top:.5rem"><div class="kicker">{{ project.display_client|default:"" }}</div><h1>{{ project.name }}</h1>{% if project.cover.caption %}<p class="muted">{{ project.cover.caption }}</p>{% endif %}</div>

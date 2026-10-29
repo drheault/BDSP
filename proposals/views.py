@@ -105,7 +105,7 @@ def proposal_create(request):
         template = form.cleaned_data.get("template")
         if template:
             proposal.apply_template(template)
-        if form.cleaned_data.get("assign_number") and proposal.region_id and has_cap(request.user, "approve_won"):
+        if form.cleaned_data.get("assign_number") and proposal.region_id and has_cap(request, "approve_won"):
             proposal.assign_project_number(user=request.user)
             messages.success(request, f"Proposal {proposal.number} created with project number {proposal.project_number}.")
         else:
@@ -225,7 +225,7 @@ def proposal_status(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
     status = request.POST.get("status")
     if status in dict(Proposal.Status.choices):
-        if status in ("won", "lost", "no_bid") and not has_cap(request.user, "approve_won"):
+        if status in ("won", "lost", "no_bid") and not has_cap(request, "approve_won"):
             messages.error(request, "Only users with the 'approve won' capability can decide a proposal.")
         else:
             try:

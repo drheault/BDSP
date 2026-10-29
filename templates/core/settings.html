@@ -47,7 +47,7 @@
   <div class="card"><div class="card-body">
     <h3>Logo</h3>
     <div style="background:#f4f6f8;border:1px dashed var(--line-2);border-radius:8px;padding:1.2rem;text-align:center;margin-bottom:.8rem">
-      {% if profile.logo %}<img src="{{ profile.logo.url }}" alt="Current logo" style="max-height:120px;max-width:100%">{% else %}<img src="{% static 'img/logo-default.svg' %}" style="height:80px"><div class="muted mt-sm">Placeholder — upload yours</div>{% endif %}
+      {% if profile.logo %}<img src="{{ profile.logo.url }}" alt="Current logo" style="max-height:120px;max-width:100%">{% else %}<img src="{% static 'img/logo-drsauer.png' %}" style="height:80px"><div class="muted mt-sm">Placeholder — upload yours</div>{% endif %}
     </div>
     {{ form.logo }}
     <div class="help">PNG or SVG with transparent background works best. Shown in the sidebar, proposal covers, Word and PDF exports.</div>

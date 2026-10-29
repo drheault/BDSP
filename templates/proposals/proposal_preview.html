@@ -6,7 +6,7 @@
 <div class="print-bar"><span class="muted">This is how the proposal prints. Use your browser's “Save as PDF”.</span><button class="btn btn-primary" onclick="window.print()">Print / save PDF</button></div>
 <article class="doc">
   <header class="cover">
-    <div>{% if company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }}">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="">{% endif %}</div>
+    <div>{% if company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }}">{% else %}<img src="{% static 'img/logo-drsauer.png' %}" alt="">{% endif %}</div>
     <div class="co"><b>{{ company.name }}</b>{% if company.tagline %}
 {{ company.tagline }}{% endif %}{% if company.address %}
 {{ company.address }}{% endif %}{% if company.phone %}

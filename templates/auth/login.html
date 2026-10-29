@@ -4,7 +4,7 @@
 <div class="login-wrap" style="background:radial-gradient(ellipse at 50% 60%, rgba(201,168,76,.28), rgba(15,19,23,0) 55%), #0f1317">
   <div class="card login"><div class="card-body">
     <a class="brand" href="/">
-      {% if company and company.logo %}<img src="{{ company.logo.url }}" alt="">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="">{% endif %}
+      {% if company and company.logo %}<img src="{{ company.logo.url }}" alt="">{% else %}<img src="{% static 'img/logo-drsauer.png' %}" alt="">{% endif %}
       <span><span class="name">{{ company.name|default:"BDSP" }}</span><br><span class="tag">Business development &amp; proposals</span></span>
     </a>
     {% if form.errors %}<div class="nonfield">Your username and password didn't match. Please try again.</div>{% endif %}

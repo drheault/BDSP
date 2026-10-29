@@ -55,8 +55,8 @@ class CompanyProfile(models.Model):
     phone = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
     website = models.URLField(blank=True)
-    primary_color = models.CharField(max_length=7, default="#2b3440")
-    accent_color = models.CharField(max_length=7, default="#b8962e")
+    primary_color = models.CharField(max_length=7, default="#1b3a5c")
+    accent_color = models.CharField(max_length=7, default="#e3a725")
     proposal_footer = models.CharField(
         max_length=255,
         blank=True,
@@ -152,6 +152,7 @@ class Region(models.Model):
     code = models.CharField(max_length=3, unique=True)
     name = models.CharField(max_length=100)
     kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.PROVINCE)
+    country = models.CharField(max_length=60, default="canada", help_text="Country folder used in file-server paths, e.g. canada, usa, uk.")
     is_active = models.BooleanField(default=True)
 
     class Meta:
