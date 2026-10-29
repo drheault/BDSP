@@ -72,15 +72,14 @@ TEMPLATES = [
 WSGI_APPLICATION = "bdsp.wsgi.application"
 
 # Postgres in production via DATABASE_URL (e.g. postgres://bdsp:bdsp@localhost:5432/bdsp);
-# SQLite for a zero-setup local run.
-import dj_database_url
+# SQLite for a zero-setup local run. Works even if dj-database-url is not installed.
+_sqlite_path = os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3"))
+try:
+    import dj_database_url
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{os.environ.get('DJANGO_DB_PATH', BASE_DIR / 'db.sqlite3')}",
-        conn_max_age=600,
-    )
-}
+    DATABASES = {"default": dj_database_url.config(default=f"sqlite:///{_sqlite_path}", conn_max_age=600)}
+except ImportError:  # pragma: no cover
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": _sqlite_path}}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

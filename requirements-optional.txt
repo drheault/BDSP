@@ -4,3 +4,6 @@
 #   Ubuntu:  sudo apt install libcairo2-dev pkg-config
 #   Windows: pip install pycairo (wheels are available)
 rlPyCairo>=0.3
+
+# Optional: Postgres driver (only when DATABASE_URL points at Postgres).
+psycopg[binary]>=3.1

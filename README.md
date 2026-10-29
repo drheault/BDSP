@@ -16,7 +16,8 @@ python manage.py runserver
 ```
 
 Everything in `requirements.txt` is pure Python and installs on macOS, Windows
-and Linux without system packages. The Gantt image inside **Word** exports needs
+and Linux without system packages. Postgres (`psycopg`) and the Word Gantt image
+(`rlPyCairo`) are in `requirements-optional.txt`. The Gantt image inside **Word** exports needs
 the optional `rlPyCairo` (see `requirements-optional.txt`); without it the Word
 file still contains the schedule table, and the PDF export is unaffected.
 
@@ -36,6 +37,7 @@ safe to re-run.
 ### Postgres
 
 ```bash
+pip install "psycopg[binary]"             # driver (also in requirements-optional.txt)
 docker compose up -d                      # local Postgres 16
 export DATABASE_URL=postgres://bdsp:bdsp@localhost:5432/bdsp
 python manage.py migrate && python manage.py seed
