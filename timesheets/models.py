@@ -63,7 +63,11 @@ class TimesheetConnector(models.Model):
     kind = models.CharField(max_length=10, choices=ActualEntry.Source.choices, default=ActualEntry.Source.OFFICE_TIMESHEETS)
     transport = models.CharField(max_length=10, choices=Transport.choices, default=Transport.FOLDER)
     export_folder = models.CharField(max_length=255, blank=True, help_text="Folder (local or mounted share) where OTS drops export files.")
-    file_pattern = models.CharField(max_length=60, default="*.csv")
+    file_pattern = models.CharField(max_length=60, default="*.csv;*.xlsx", help_text="Semicolon-separated patterns, e.g. *.csv;*.xlsx")
+    column_map = models.JSONField(
+        default=dict, blank=True,
+        help_text="Optional header overrides for the export, e.g. {\"date\": \"Work Date\", \"employee\": \"Resource Name\", \"project_number\": \"Job #\"}. Built-in aliases cover common names.",
+    )
     base_url = models.URLField(blank=True, help_text="Export URL returning CSV or JSON.")
     api_key = models.CharField(max_length=255, blank=True)
     username = models.CharField(max_length=100, blank=True)

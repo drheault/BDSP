@@ -2,7 +2,7 @@
 {% block title %}Proposals{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Proposals</h1><div class="sub">Every pursuit from first lead to decision.</div></div>
-<div class="actions"><a class="btn" href="{% url 'proposal_board' %}">Board view</a><a class="btn btn-primary" href="{% url 'proposal_create' %}">+ New proposal</a></div></div>
+<div class="actions"><a class="btn" href="{% url 'proposal_board' %}">Board view</a>{% if can.edit_proposals %}<a class="btn btn-primary" href="{% url 'proposal_create' %}">{% include "includes/icons.html" with name="plus" %} New proposal</a>{% endif %}</div></div>
 <form class="filters" hx-get="{% url 'proposal_list' %}" hx-trigger="input changed delay:300ms from:input, change from:select" hx-target="#proposal-rows" hx-include="this">
   <input type="search" name="q" placeholder="Search title, number, client…" value="{{ filters.q }}">
   <select name="status"><option value="">All statuses</option><option value="open" {% if filters.status == "open" %}selected{% endif %}>Open only</option>{% for k, v in statuses %}<option value="{{ k }}" {% if filters.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>

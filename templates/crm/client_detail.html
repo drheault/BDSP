@@ -2,8 +2,8 @@
 {% block title %}{{ client }}{% endblock %}
 {% block content %}
 <div class="page-head"><div><div class="crumbs"><a href="{% url 'client_list' %}">Clients</a> /</div><h1>{{ client.name }}</h1><div class="sub">{{ client.get_sector_display }}{% if client.website %} · <a href="{{ client.website }}" target="_blank" rel="noopener">{{ client.website|cut:"https://"|cut:"http://" }}</a>{% endif %}</div></div>
-<div class="actions"><a class="btn btn-primary" href="{% url 'proposal_create' %}?client={{ client.pk }}">+ Proposal for this client</a><a class="btn" href="{% url 'client_edit' client.pk %}">Edit</a>
-<form method="post" action="{% url 'client_delete' client.pk %}" data-confirm="Delete this client?">{% csrf_token %}<button class="btn btn-danger">Delete</button></form></div></div>
+<div class="actions">{% if can.edit_proposals %}<a class="btn btn-primary" href="{% url 'proposal_create' %}?client={{ client.pk }}">{% include "includes/icons.html" with name="plus" %} Proposal for this client</a><a class="btn" href="{% url 'client_edit' client.pk %}">{% include "includes/icons.html" with name="edit" %} Edit</a>
+<details class="menu"><summary class="btn btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><form method="post" action="{% url 'client_delete' client.pk %}" data-confirm="Delete this client?">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete client</button></form></div></details>{% endif %}</div></div>
 <div class="grid grid-3">
   <div class="span-2 stack">
     <div class="card"><div class="card-head"><h3>Contacts</h3></div><div id="contacts">{% include "crm/_contact_list.html" %}</div></div>

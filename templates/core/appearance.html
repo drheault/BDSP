@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% load bdsp %}
+{% block title %}Appearance{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Appearance</h1><div class="sub">Pick a look for everyone, fine-tune colours and fonts, or import a theme file. Changes apply instantly to all users.</div></div>
+<div class="actions"><details class="menu"><summary class="btn">Import theme {% include "includes/icons.html" with name="chev" %}</summary><div class="menu-items" style="min-width:280px;padding:.8rem"><form method="post" action="{% url 'theme_import' %}" enctype="multipart/form-data" class="stack">{% csrf_token %}{{ import_form.file }}<button class="btn btn-primary btn-sm">Import JSON</button></form></div></details>
+{% if active %}<form method="post" action="{% url 'theme_reset' %}">{% csrf_token %}<button class="btn btn-ghost">Use built-in default</button></form>{% endif %}</div></div>
+
+<h2>Built-in styles</h2>
+<div class="grid grid-4 mb">
+{% for key, p in presets.items %}
+  <div class="theme-card {% if active.based_on == key and active %}active{% endif %}">
+    <div class="mini" style="background:{{ p.vars.bg }};font-family:{{ p.vars.font }}"><div class="ms" style="background:{{ p.vars|get_item:"sidebar-bg" }};color:{{ p.vars|get_item:"sidebar-ink" }}"><div style="font-weight:700">{{ company.name|truncatechars:14 }}</div><div style="background:{{ p.vars|get_item:"sidebar-active" }};border-radius:4px;padding:2px 4px;margin-top:6px">Dashboard</div><div style="padding:2px 4px;color:{{ p.vars|get_item:"sidebar-muted" }}">Proposals</div><div style="padding:2px 4px;color:{{ p.vars|get_item:"sidebar-muted" }}">Schedule</div></div>
+      <div class="mm"><div class="mc" style="background:{{ p.vars.card }};border:1px solid {{ p.vars.line }}"></div><div class="mc" style="background:{{ p.vars.card }};border:1px solid {{ p.vars.line }}"></div><div class="mc" style="background:{{ p.vars.navy }};grid-column:1/-1;height:18px"></div><div class="mc" style="background:{{ p.vars.accent }};height:14px;width:60%"></div></div></div>
+    <h3 class="mt-sm" style="margin-bottom:.1rem">{{ p.name }}</h3><div class="muted">{{ p.description }}</div>
+    <div class="swatches mt-sm"><i style="background:{{ p.vars.navy }}"></i><i style="background:{{ p.vars.accent }}"></i><i style="background:{{ p.vars|get_item:"sidebar-bg" }}"></i><i style="background:{{ p.vars.bg }}"></i><i style="background:{{ p.vars.ink }}"></i></div>
+    <div class="row-flex mt-sm"><form method="post" action="{% url 'theme_from_preset' key %}">{% csrf_token %}<input type="hidden" name="activate" value="1"><button class="btn btn-primary btn-sm">Use this style</button></form>
+      <form method="post" action="{% url 'theme_from_preset' key %}">{% csrf_token %}<input type="hidden" name="edit" value="1"><button class="btn btn-sm">Copy &amp; customise</button></form></div>
+  </div>
+{% endfor %}
+</div>
+
+<h2>Saved themes</h2>
+<div class="card"><table class="tbl"><thead><tr><th>Theme</th><th>Based on</th><th>Colours</th><th>Updated</th><th></th></tr></thead><tbody>
+{% for t in themes %}<tr><td><strong>{{ t.name }}</strong>{% if t.is_active %} <span class="badge badge-won">active</span>{% endif %}{% if t.description %}<br><small>{{ t.description }}</small>{% endif %}</td><td>{{ t.based_on|default:"—" }}</td>
+<td><div class="swatches"><i style="background:{{ t.variables.navy|default:'#0f3d5e' }}"></i><i style="background:{{ t.variables.accent|default:'#e07a1f' }}"></i><i style="background:{{ t.variables|get_item:'sidebar-bg'|default:'#0f3d5e' }}"></i><i style="background:{{ t.variables.bg|default:'#f4f6f8' }}"></i></div></td><td>{{ t.updated_at|date:"j M Y H:i" }}</td>
+<td class="row-actions">{% if not t.is_active %}<form method="post" action="{% url 'theme_activate' t.pk %}" style="display:inline">{% csrf_token %}<button class="btn btn-sm btn-primary">Apply</button></form>{% endif %}
+  <details class="menu"><summary class="btn btn-sm btn-icon" title="More">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+    <a href="{% url 'theme_edit' t.pk %}">{% include "includes/icons.html" with name="edit" %} Edit colours &amp; CSS</a>
+    <a href="{% url 'theme_export' t.pk %}">{% include "includes/icons.html" with name="download" %} Export JSON</a>
+    <hr><form method="post" action="{% url 'theme_delete' t.pk %}" data-confirm="Delete theme {{ t.name }}?">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete</button></form></div></details></td></tr>
+{% empty %}<tr><td colspan="5"><div class="empty"><strong>No saved themes</strong>Pick a built-in style above, or copy one to customise it.</div></td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

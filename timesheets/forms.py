@@ -26,12 +26,12 @@ class ActualEntryForm(forms.ModelForm):
 
 
 class CsvImportForm(forms.Form):
-    file = forms.FileField(help_text="CSV with columns: date, employee, hours and optionally project_number, task, cost, description, id.")
+    file = forms.FileField(help_text="CSV or Excel (.xlsx) with columns: date, employee, hours and optionally project_number, task, cost, description, id.")
     source = forms.ChoiceField(choices=[("csv", "CSV import"), ("ots", "Office Timesheets export")], initial="csv")
 
 
 class ConnectorForm(forms.ModelForm):
     class Meta:
         model = TimesheetConnector
-        fields = ["name", "transport", "export_folder", "file_pattern", "base_url", "api_key", "username", "password", "only_phases", "lookback_days", "is_enabled"]
-        widgets = {"password": forms.PasswordInput(render_value=True), "api_key": forms.PasswordInput(render_value=True)}
+        fields = ["name", "transport", "export_folder", "file_pattern", "base_url", "api_key", "username", "password", "only_phases", "lookback_days", "column_map", "is_enabled"]
+        widgets = {"password": forms.PasswordInput(render_value=True), "api_key": forms.PasswordInput(render_value=True), "column_map": forms.Textarea(attrs={"rows": 3, "class": "mono"})}

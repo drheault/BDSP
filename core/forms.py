@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
-from .models import CAPABILITIES, AccessRole, CompanyProfile, Currency, Region
+from .models import CAPABILITIES, AccessRole, CompanyProfile, Currency, Region, Theme
+from .themes import VAR_KEYS
 
 User = get_user_model()
 
@@ -88,3 +89,38 @@ class UserForm(forms.ModelForm):
             user.save()
             user.access_roles.set(self.cleaned_data["roles"])
         return user
+
+
+class ThemeForm(forms.ModelForm):
+    """Edits a theme: one field per CSS variable plus custom CSS."""
+
+    class Meta:
+        model = Theme
+        fields = ["name", "description", "custom_css"]
+        widgets = {"custom_css": forms.Textarea(attrs={"rows": 6, "class": "mono", "placeholder": ".card { box-shadow: none; }"})}
+
+    COLOR_KEYS = {"navy", "navy-700", "navy-100", "accent", "accent-100", "ink", "ink-2", "ink-3", "line", "line-2", "bg", "card", "sidebar-bg", "sidebar-ink", "sidebar-muted"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        vals = self.instance.variables or {}
+        for key in VAR_KEYS:
+            if key in self.COLOR_KEYS and str(vals.get(key, "")).startswith("#"):
+                widget = forms.TextInput(attrs={"type": "color"})
+            else:
+                widget = forms.TextInput()
+            self.fields[f"var_{key}"] = forms.CharField(label=key, required=False, initial=vals.get(key, ""), widget=widget)
+
+    def save(self, commit=True):
+        theme = super().save(commit=False)
+        theme.variables = {k: self.cleaned_data.get(f"var_{k}", "") for k in VAR_KEYS if self.cleaned_data.get(f"var_{k}")}
+        if commit:
+            theme.save()
+        return theme
+
+    def var_fields(self):
+        return [self[f"var_{k}"] for k in VAR_KEYS]
+
+
+class ThemeImportForm(forms.Form):
+    file = forms.FileField(help_text="A theme JSON file exported from this page.")

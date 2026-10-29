@@ -50,6 +50,22 @@ class ImportTests(TestCase):
         self.assertEqual(self.item.actual_hours, Decimal("9.5"))
         self.assertEqual(self.p.hours_variance_pct, -90.5)
 
+    def test_xlsx_import_with_column_overrides(self):
+        from openpyxl import Workbook
+
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["Work Date", "Resource Name", "Job #", "Activity", "Hrs"])
+        ws.append([__import__("datetime").date(2026, 4, 1), "Ann Lee", "610C", "Drawings", 5])
+        ws.append([__import__("datetime").date(2026, 4, 2), "E42", "610C", "", 2.5])
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        res = import_csv(buf, source="ots", column_map={"date": "Work Date", "employee": "Resource Name", "project_number": "Job #", "task": "Activity"}, filename="export.xlsx")
+        self.assertEqual((res["created"], res["errors"]), (2, []))
+        self.assertEqual(self.p.actual_hours, Decimal("7.5"))
+        self.assertEqual(ActualEntry.objects.filter(item=self.item).count(), 1)
+
     def test_folder_sync_imports_new_files_once_and_filters_phase(self):
         bd = Proposal.objects.create(title="BD pursuit", region=self.p.region, sequence=611)  # B-ON611, phase B
         folder = tempfile.mkdtemp()

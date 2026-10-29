@@ -5,6 +5,7 @@
   <td class="num">{{ line.unit_cost|money2:line.item.proposal.cur }}</td>
   <td class="num">{% if line.kind != 'labour' and line.markup_percent %}{{ line.markup_percent|num:1 }}%{% else %}—{% endif %}</td>
   <td class="num"><strong>{{ line.amount|money:line.item.proposal.cur }}</strong></td>
-  <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'line_edit' line.pk %}" hx-target="#line-{{ line.pk }}" hx-swap="outerHTML">Edit</button>
-  <button class="btn btn-xs btn-danger" hx-post="{% url 'line_delete' line.pk %}" hx-target="#fee-panel" hx-on::after-request="htmx.ajax('GET','{% url 'fee_summary' line.item.proposal_id %}',{target:'#fee-summary'})">×</button></td>
+  <td class="row-actions">{% if can.edit_proposals %}<details class="menu"><summary class="btn btn-xs btn-icon" title="Line actions">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+    <button hx-get="{% url 'line_edit' line.pk %}" hx-target="#line-{{ line.pk }}" hx-swap="outerHTML">{% include "includes/icons.html" with name="edit" %} Edit line</button>
+    <hr><button class="danger" hx-post="{% url 'line_delete' line.pk %}" hx-target="#fee-panel" hx-on::after-request="htmx.ajax('GET','{% url 'fee_summary' line.item.proposal_id %}',{target:'#fee-summary'})">{% include "includes/icons.html" with name="trash" %} Delete line</button></div></details>{% endif %}</td>
 </tr>

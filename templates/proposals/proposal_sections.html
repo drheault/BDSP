@@ -5,10 +5,8 @@
 <div class="grid grid-3">
   <div class="span-2">
     <div id="section-list">{% include "proposals/_section_list.html" %}</div>
-    <form class="row-flex mt" hx-post="{% url 'section_add' proposal.pk %}" hx-target="#sections" hx-swap="beforeend">
-      <input type="text" name="title" placeholder="New section title…" style="max-width:320px">
-      <button class="btn btn-primary">+ Add section</button>
-    </form>
+    {% if can.edit_proposals %}<details class="reveal mt"><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} Add section</span></summary>
+      <form class="row-flex reveal-body" hx-post="{% url 'section_add' proposal.pk %}" hx-target="#sections" hx-swap="beforeend"><input type="text" name="title" placeholder="Section title…" style="max-width:360px" autofocus><button class="btn btn-primary">Add</button></form></details>{% endif %}
   </div>
   <div class="stack">
     <div class="card"><div class="card-body">

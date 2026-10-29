@@ -19,5 +19,13 @@ urlpatterns = [
     path("settings/users/", views.users, name="users"),
     path("settings/users/new/", views.user_form, name="user_create"),
     path("settings/users/<int:pk>/", views.user_form, name="user_edit"),
+    path("settings/appearance/", views.appearance, name="appearance"),
+    path("settings/appearance/preset/<str:key>/", views.theme_from_preset, name="theme_from_preset"),
+    path("settings/appearance/reset/", views.theme_reset, name="theme_reset"),
+    path("settings/appearance/import/", views.theme_import, name="theme_import"),
+    path("settings/appearance/<int:pk>/", views.theme_edit, name="theme_edit"),
+    path("settings/appearance/<int:pk>/activate/", views.theme_activate, name="theme_activate"),
+    path("settings/appearance/<int:pk>/delete/", views.theme_delete, name="theme_delete"),
+    path("settings/appearance/<int:pk>/export/", views.theme_export, name="theme_export"),
     path("metrics/", views.metrics, name="metrics"),
 ]

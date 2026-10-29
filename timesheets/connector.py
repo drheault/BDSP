@@ -53,8 +53,9 @@ class OfficeTimesheetsSync:
         folder = self.config.export_folder
         if not folder or not os.path.isdir(folder):
             raise SyncError(f"Export folder not reachable: {folder or '(not set)'}")
+        patterns = [p.strip().lower() for p in self.config.file_pattern.split(";") if p.strip()] or ["*.csv"]
         for name in sorted(os.listdir(folder)):
-            if not fnmatch.fnmatch(name.lower(), self.config.file_pattern.lower()):
+            if name.startswith("~$") or not any(fnmatch.fnmatch(name.lower(), pat) for pat in patterns):
                 continue
             full = os.path.join(folder, name)
             st = os.stat(full)
@@ -91,8 +92,8 @@ class OfficeTimesheetsSync:
         return body
 
     # ---- import with phase filter -----------------------------------------
-    def _import(self, data: bytes, log: list):
-        res = import_csv(io.BytesIO(data), source=self.config.kind)
+    def _import(self, data: bytes, log: list, filename: str = ""):
+        res = import_csv(io.BytesIO(data), source=self.config.kind, column_map=self.config.column_map or None, filename=filename)
         # drop entries created for projects outside the allowed phases
         from .models import ActualEntry
 
@@ -113,7 +114,7 @@ class OfficeTimesheetsSync:
             if self.config.transport == TimesheetConnector.Transport.FOLDER:
                 for name, full, fp in self._folder_files():
                     with open(full, "rb") as f:
-                        res = self._import(f.read(), log)
+                        res = self._import(f.read(), log, filename=name)
                     ProcessedFile.objects.create(connector=self.config, name=name, fingerprint=fp)
                     files += 1
                     run.created += res["created"]

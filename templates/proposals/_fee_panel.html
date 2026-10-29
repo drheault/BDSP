@@ -1,20 +1,19 @@
 {% load bdsp %}
 <div class="card mb">
   <div class="card-head"><h3>Work breakdown</h3><span class="muted">{{ items|length }} item{{ items|length|pluralize }} · {{ proposal.total_hours|num:0 }} h · {{ proposal.subtotal|money:proposal.cur }}</span></div>
-  <table class="tbl"><thead><tr><th>Code</th><th>Item</th><th>Type</th><th>Schedule link</th><th class="num">Hours</th><th class="num">Labour</th><th class="num">Expenses</th><th class="num">Total</th></tr></thead><tbody>
+  <div class="table-wrap"><table class="tbl"><thead><tr><th>Code</th><th>Item</th><th>Type</th><th>Schedule link</th><th class="num">Hours</th><th class="num">Labour</th><th class="num">Expenses</th><th class="num">Total</th></tr></thead><tbody>
   {% for item in items %}<tr><td class="mono">{{ item.code }}</td><td><a href="#item-{{ item.pk }}">{{ item.name }}</a></td><td><small>{{ item.get_kind_display }}</small></td><td><small>{{ item.task.name|default:"—" }}</small></td><td class="num">{{ item.hours|num:0 }}</td><td class="num">{{ item.labour_total|money:proposal.cur }}</td><td class="num">{{ item.expense_total|money:proposal.cur }}</td><td class="num"><strong>{{ item.total|money:proposal.cur }}</strong></td></tr>
   {% empty %}<tr><td colspan="8" class="muted">No work items yet. Add the first one below.</td></tr>{% endfor %}
-  </tbody></table>
+  </tbody></table></div>
 </div>
 
 <div id="items">
 {% for item in items %}{% include "proposals/_item_card.html" %}{% endfor %}
 </div>
 
-<div class="card" id="add-item">
-  <div class="card-head"><h3>Add a work item</h3></div>
-  <div class="card-body">
-    <form hx-post="{% url 'item_add' proposal.pk %}" hx-target="#fee-panel" class="inline-form" hx-on::after-request="if(event.detail.successful){htmx.ajax('GET','{% url 'fee_summary' proposal.pk %}',{target:'#fee-summary'})}">
+{% if can.edit_proposals %}<div class="card" id="add-item">
+  <div class="card-body"><details class="reveal" {% if item_form.errors or not items %}open{% endif %}><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} Add work item</span> <span class="muted" style="margin-left:.6rem">drawings, reports, design tasks, meetings…</span></summary>
+    <form hx-post="{% url 'item_add' proposal.pk %}" hx-target="#fee-panel" class="inline-form reveal-body" hx-on::after-request="if(event.detail.successful){htmx.ajax('GET','{% url 'fee_summary' proposal.pk %}',{target:'#fee-summary'})}">
       <div class="field narrow" style="flex-basis:80px"><label>Code</label>{{ item_form.code }}</div>
       <div class="field" style="flex:2"><label>Name</label><input type="text" name="name" id="id_item_name" placeholder="e.g. Lining design drawings" required hx-get="{% url 'fee_suggest' proposal.pk %}" hx-trigger="input changed delay:400ms" hx-target="#suggestions" hx-include="#add-item select[name='kind']">{% for e in item_form.name.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
       <div class="field"><label>Type</label>{{ item_form.kind }}</div>
@@ -22,5 +21,5 @@
       <button class="btn btn-primary btn-sm">Add item</button>
     </form>
     <div id="suggestions" class="mt-sm"></div>
-  </div>
-</div>
+  </details></div>
+</div>{% endif %}

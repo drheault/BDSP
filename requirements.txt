@@ -6,3 +6,4 @@ psycopg[binary]>=3.1
 python-docx>=1.1
 reportlab>=4
 rlPyCairo>=0.3
+openpyxl>=3.1

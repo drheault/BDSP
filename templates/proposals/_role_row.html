@@ -1,4 +1,4 @@
 {% load bdsp %}<tr id="role-{{ role.pk }}" {% if not role.is_active %}style="opacity:.5"{% endif %}>
   <td><strong>{{ role.title }}</strong>{% if not role.is_active %} <span class="badge">inactive</span>{% endif %}</td><td class="num">{{ role.default_rate|money2:company.base_currency }}</td>
-  <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'role_edit' role.pk %}" hx-target="#role-{{ role.pk }}" hx-swap="outerHTML">Edit</button>
-  <button class="btn btn-xs btn-danger" hx-post="{% url 'role_delete' role.pk %}" hx-confirm="Remove “{{ role.title }}”? Roles already used in fees are deactivated instead." hx-target="#roles">×</button></td></tr>
+  <td class="row-actions">{% if can.edit_rates %}<button class="btn btn-xs" hx-get="{% url 'role_edit' role.pk %}" hx-target="#role-{{ role.pk }}" hx-swap="outerHTML">{% include "includes/icons.html" with name="edit" %} Edit</button>
+  <details class="menu"><summary class="btn btn-xs btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><button class="danger" hx-post="{% url 'role_delete' role.pk %}" hx-confirm="Remove “{{ role.title }}”? Roles already used in fees are deactivated instead." hx-target="#roles">{% include "includes/icons.html" with name="trash" %} Remove</button></div></details>{% endif %}</td></tr>

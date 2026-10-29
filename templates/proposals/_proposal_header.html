@@ -6,18 +6,21 @@
   </div>
   <div class="actions">
     {% include "proposals/_status_control.html" %}
-    <a class="btn" href="{% url 'proposal_export' proposal.pk 'docx' %}" title="Download Word document">Word</a>
-    <a class="btn" href="{% url 'proposal_export' proposal.pk 'pdf' %}" title="Download PDF">PDF</a>
-    {% if can.edit_proposals %}<form method="post" action="{% url 'proposal_duplicate' proposal.pk %}">{% csrf_token %}<button class="btn">Duplicate</button></form>
-    <form method="post" action="{% url 'proposal_delete' proposal.pk %}" data-confirm="Delete proposal {{ proposal.number }}? This cannot be undone.">{% csrf_token %}<button class="btn btn-danger">Delete</button></form>{% endif %}
+    <details class="menu"><summary class="btn">{% include "includes/icons.html" with name="download" %} Export {% include "includes/icons.html" with name="chev" %}</summary><div class="menu-items">
+      <a href="{% url 'proposal_export' proposal.pk 'docx' %}">{% include "includes/icons.html" with name="doc" %} Word document (.docx)</a>
+      <a href="{% url 'proposal_export' proposal.pk 'pdf' %}">{% include "includes/icons.html" with name="doc" %} PDF</a>
+      <a href="{% url 'proposal_preview' proposal.pk %}">{% include "includes/icons.html" with name="print" %} Preview &amp; print</a></div></details>
+    {% if can.edit_proposals %}<details class="menu"><summary class="btn btn-icon" title="More actions">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+      <form method="post" action="{% url 'proposal_duplicate' proposal.pk %}">{% csrf_token %}<button>{% include "includes/icons.html" with name="copy" %} Duplicate proposal</button></form>
+      {% if can.approve_won %}<hr><form method="post" action="{% url 'proposal_delete' proposal.pk %}" data-confirm="Delete proposal {{ proposal.number }}? This cannot be undone.">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete proposal</button></form>{% endif %}</div></details>{% endif %}
   </div>
 </div>
 <div class="tabs">
-  <a href="{% url 'proposal_detail' proposal.pk %}" class="{% if tab == 'overview' %}active{% endif %}">Overview</a>
-  <a href="{% url 'proposal_sections' proposal.pk %}" class="{% if tab == 'content' %}active{% endif %}">Content <span class="count">{{ proposal.sections.count }}</span></a>
-  <a href="{% url 'proposal_fee' proposal.pk %}" class="{% if tab == 'fee' %}active{% endif %}">Fee estimate <span class="count">{{ proposal.fee_total|money:proposal.cur }}</span></a>
-  <a href="{% url 'proposal_schedule' proposal.pk %}" class="{% if tab == 'schedule' %}active{% endif %}">Schedule <span class="count">{{ proposal.tasks.count }}</span></a>
-  {% if can.view_actuals %}<a href="{% url 'proposal_actuals' proposal.pk %}" class="{% if tab == 'actuals' %}active{% endif %}">Actuals{% if proposal.actual_hours %} <span class="count">{{ proposal.actual_hours|num:0 }} h</span>{% endif %}</a>{% endif %}
-  <a href="{% url 'proposal_records' proposal.pk %}" class="{% if tab == 'records' %}active{% endif %}">Records &amp; files{% if proposal.records.count %} <span class="count">{{ proposal.records.count }}</span>{% endif %}</a>
-  <a href="{% url 'proposal_preview' proposal.pk %}" class="{% if tab == 'preview' %}active{% endif %}">Preview &amp; print</a>
+  <a href="{% url 'proposal_detail' proposal.pk %}" class="{% if tab == 'overview' %}active{% endif %}">{% include "includes/icons.html" with name="info" %} Overview</a>
+  <a href="{% url 'proposal_sections' proposal.pk %}" class="{% if tab == 'content' %}active{% endif %}">{% include "includes/icons.html" with name="text" %} Content <span class="count">{{ proposal.sections.count }}</span></a>
+  <a href="{% url 'proposal_fee' proposal.pk %}" class="{% if tab == 'fee' %}active{% endif %}">{% include "includes/icons.html" with name="money" %} Fee <span class="count">{{ proposal.fee_total|money:proposal.cur }}</span></a>
+  <a href="{% url 'proposal_schedule' proposal.pk %}" class="{% if tab == 'schedule' %}active{% endif %}">{% include "includes/icons.html" with name="cal" %} Schedule <span class="count">{{ proposal.tasks.count }}</span></a>
+  {% if can.view_actuals %}<a href="{% url 'proposal_actuals' proposal.pk %}" class="{% if tab == 'actuals' %}active{% endif %}">{% include "includes/icons.html" with name="clock" %} Actuals{% if proposal.actual_hours %} <span class="count">{{ proposal.actual_hours|num:0 }} h</span>{% endif %}</a>{% endif %}
+  <a href="{% url 'proposal_records' proposal.pk %}" class="{% if tab == 'records' %}active{% endif %}">{% include "includes/icons.html" with name="folder" %} Files{% if proposal.records.count %} <span class="count">{{ proposal.records.count }}</span>{% endif %}</a>
+  <a href="{% url 'proposal_preview' proposal.pk %}" class="{% if tab == 'preview' %}active{% endif %}">{% include "includes/icons.html" with name="eye" %} Preview</a>
 </div>

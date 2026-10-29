@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AccessRole, CompanyProfile, Currency, Region
+from .models import AccessRole, CompanyProfile, Currency, Region, Theme
 
 
 @admin.register(CompanyProfile)
@@ -25,3 +25,8 @@ class RegionAdmin(admin.ModelAdmin):
 class AccessRoleAdmin(admin.ModelAdmin):
     list_display = ("name", "rank", "is_system")
     filter_horizontal = ("users",)
+
+
+@admin.register(Theme)
+class ThemeAdmin(admin.ModelAdmin):
+    list_display = ("name", "based_on", "is_active", "updated_at")

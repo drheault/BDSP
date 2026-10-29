@@ -2,7 +2,7 @@
 {% block title %}Clients{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Clients &amp; contacts</h1><div class="sub">Owners, agencies and contractors you pursue work with.</div></div>
-<div class="actions"><a class="btn btn-primary" href="{% url 'client_create' %}">+ New client</a></div></div>
+<div class="actions">{% if can.edit_proposals %}<a class="btn btn-primary" href="{% url 'client_create' %}">{% include "includes/icons.html" with name="plus" %} New client</a>{% endif %}</div></div>
 <div class="filters"><input type="search" name="q" placeholder="Search clients or contacts…" value="{{ q }}" hx-get="{% url 'client_list' %}" hx-trigger="input changed delay:300ms, search" hx-target="#client-rows"></div>
 <div class="card"><table class="tbl"><thead><tr><th>Client</th><th>Sector</th><th class="num">Contacts</th><th class="num">Proposals</th></tr></thead>
 <tbody id="client-rows">{% include "crm/_client_rows.html" %}</tbody></table></div>

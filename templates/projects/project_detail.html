@@ -3,8 +3,8 @@
 {% block head %}<style>:root{--doc-primary:{{ company.primary_color }};--doc-accent:{{ company.accent_color }}}</style>{% endblock %}
 {% block content %}
 <div class="page-head no-print"><div><div class="crumbs"><a href="{% url 'project_list' %}">Project sheets</a> /</div><h1>{{ project.name }}</h1><div class="sub">{{ project.get_kind_display }}{% if project.location %} · {{ project.location }}{% endif %}</div></div>
-<div class="actions"><button class="btn" onclick="window.print()">Print sheet</button><a class="btn" href="{% url 'project_edit' project.pk %}">Edit</a>
-<form method="post" action="{% url 'project_delete' project.pk %}" data-confirm="Delete this project sheet and its images?">{% csrf_token %}<button class="btn btn-danger">Delete</button></form></div></div>
+<div class="actions"><button class="btn" onclick="window.print()">{% include "includes/icons.html" with name="print" %} Print sheet</button>{% if can.manage_projects_library %}<a class="btn" href="{% url 'project_edit' project.pk %}">{% include "includes/icons.html" with name="edit" %} Edit</a>
+<details class="menu"><summary class="btn btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><form method="post" action="{% url 'project_delete' project.pk %}" data-confirm="Delete this project sheet and its images?">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete project sheet</button></form></div></details>{% endif %}</div></div>
 
 <article class="doc">
   <header class="cover"><div>{% if company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }}">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt=""><b style="color:var(--doc-primary)"> {{ company.name }}</b>{% endif %}</div><div class="co"><b>Project sheet</b>
@@ -24,5 +24,5 @@
   <footer class="footer"><span>{{ company.name }}</span><span>{{ project.name }}</span></footer>
 </article>
 
-<div class="card mt no-print"><div class="card-head"><h3>Images</h3><span class="muted">First image is the cover.</span></div><div id="gallery">{% include "projects/_image_gallery.html" %}</div></div>
+{% if can.manage_projects_library %}<div class="card mt no-print"><div class="card-head"><h3>Images</h3><span class="muted">First image is the cover.</span></div><div id="gallery">{% include "projects/_image_gallery.html" %}</div></div>{% endif %}
 {% endblock %}

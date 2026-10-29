@@ -1,8 +1,10 @@
 <div class="section-card" id="section-{{ section.pk }}">
   <div class="sc-head"><span class="n">{{ section.order|add:1 }}</span><h3>{{ section.title }}</h3>
-    <button class="btn btn-xs btn-ghost" hx-post="{% url 'tsection_move' section.pk 'up' %}" hx-target="#section-list" hx-swap="innerHTML">↑</button>
-    <button class="btn btn-xs btn-ghost" hx-post="{% url 'tsection_move' section.pk 'down' %}" hx-target="#section-list" hx-swap="innerHTML">↓</button>
-    <button class="btn btn-sm" hx-get="{% url 'tsection_edit' section.pk %}" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML">Edit</button>
-    <button class="btn btn-sm btn-danger" hx-post="{% url 'tsection_delete' section.pk %}" hx-confirm="Delete “{{ section.title }}”?" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML swap:150ms">Delete</button></div>
+    <button class="btn btn-sm" hx-get="{% url 'tsection_edit' section.pk %}" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML">{% include "includes/icons.html" with name="edit" %} Edit</button>
+    <details class="menu"><summary class="btn btn-sm btn-icon" title="More">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+      <button hx-post="{% url 'tsection_move' section.pk 'up' %}" hx-target="#section-list" hx-swap="innerHTML">{% include "includes/icons.html" with name="up" %} Move up</button>
+      <button hx-post="{% url 'tsection_move' section.pk 'down' %}" hx-target="#section-list" hx-swap="innerHTML">{% include "includes/icons.html" with name="down" %} Move down</button>
+      <hr><button class="danger" hx-post="{% url 'tsection_delete' section.pk %}" hx-confirm="Delete “{{ section.title }}”?" hx-target="#section-{{ section.pk }}" hx-swap="outerHTML swap:150ms">{% include "includes/icons.html" with name="trash" %} Delete section</button></div></details>
+  </div>
   <div class="sc-body">{{ section.body }}</div>
 </div>

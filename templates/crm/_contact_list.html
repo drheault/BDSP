@@ -1,6 +1,6 @@
 <table class="tbl"><thead><tr><th>Name</th><th>Title</th><th>Email</th><th>Phone</th><th></th></tr></thead>
 <tbody id="contact-rows">{% for contact in client.contacts.all %}{% include "crm/_contact_row.html" %}{% empty %}<tr id="no-contacts"><td colspan="5" class="muted">No contacts yet.</td></tr>{% endfor %}</tbody></table>
-<div class="card-body" style="border-top:1px solid var(--line)">
+<div class="add-bar"><details class="reveal" {% if contact_form.errors %}open{% endif %}><summary><span class="btn btn-sm">{% include "includes/icons.html" with name="plus" %} Add contact</span></summary><div class="reveal-body">
 <form hx-post="{% url 'contact_add' client.pk %}" hx-target="#contacts" hx-swap="innerHTML" class="inline-form">
   <div class="field"><label>Name</label>{{ contact_form.name }}{% for e in contact_form.name.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
   <div class="field"><label>Title</label>{{ contact_form.title }}</div>
@@ -8,4 +8,4 @@
   <div class="field narrow"><label>Phone</label>{{ contact_form.phone }}</div>
   <div class="field check narrow">{{ contact_form.is_primary }}<label>Primary</label></div>
   <button class="btn btn-primary btn-sm" type="submit">Add contact</button>
-</form></div>
+</form></div></details></div>

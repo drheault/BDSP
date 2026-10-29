@@ -4,7 +4,7 @@
 <div class="page-head">
   <div><h1>Good {% now "H" as h %}{% if h < "12" %}morning{% elif h < "18" %}afternoon{% else %}evening{% endif %}, {{ user.first_name|default:user.username }}</h1>
   <div class="sub">{% now "l, j F Y" %} · pipeline at a glance</div></div>
-  <div class="actions"><a class="btn btn-primary" href="{% url 'proposal_create' %}">+ New proposal</a><a class="btn" href="{% url 'proposal_board' %}">Board view</a></div>
+  <div class="actions">{% if can.edit_proposals %}<a class="btn btn-primary" href="{% url 'proposal_create' %}">{% include "includes/icons.html" with name="plus" %} New proposal</a>{% endif %}<a class="btn" href="{% url 'proposal_board' %}">Board view</a></div>
 </div>
 
 <div class="grid grid-4 mb">
@@ -22,13 +22,13 @@
   <div class="card span-2">
     <div class="card-head"><h2>Recent proposals</h2><a class="btn btn-sm" href="{% url 'proposal_list' %}">All proposals</a></div>
     {% if recent %}
-    <table class="tbl"><thead><tr><th>No.</th><th>Title</th><th>Client</th><th>Status</th><th class="num">Fee</th><th>Due</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="tbl"><thead><tr><th>No.</th><th>Title</th><th>Client</th><th>Status</th><th class="num">Fee</th><th>Due</th></tr></thead><tbody>
       {% for p in recent %}
       <tr><td class="mono">{{ p.number }}</td><td><a class="strong" href="{% url 'proposal_detail' p.pk %}">{{ p.title }}</a><br><small>{{ p.get_service_type_display }}{% if p.owner %} · {{ p.owner.get_full_name|default:p.owner.username }}{% endif %}</small></td>
       <td>{{ p.client|default:"—" }}</td><td>{% include "proposals/_status_badge.html" with proposal=p %}</td><td class="num">{{ p.fee_total|money:p.cur }}</td>
       <td>{% if p.due_date %}<span class="{% if p.is_open and p.days_to_due < 0 %}due-bad{% elif p.is_open and p.days_to_due <= 7 %}due-warn{% endif %}">{{ p.due_date|date:"j M" }}</span>{% else %}—{% endif %}</td></tr>
       {% endfor %}
-    </tbody></table>
+    </tbody></table></div>
     {% else %}<div class="empty"><strong>No proposals yet</strong>Create your first pursuit to see it here.</div>{% endif %}
   </div>
   <div class="stack">

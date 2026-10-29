@@ -88,7 +88,8 @@ def actual_import(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
     form = CsvImportForm(request.POST, request.FILES)
     if form.is_valid():
-        result = import_csv(form.cleaned_data["file"], source=form.cleaned_data["source"], default_proposal=proposal)
+        f = form.cleaned_data["file"]
+        result = import_csv(f, source=form.cleaned_data["source"], default_proposal=proposal, column_map=TimesheetConnector.get_solo().column_map or None, filename=f.name)
         messages.success(request, f"Imported {result['created']} entries, skipped {result['skipped']} duplicates.")
         for err in result["errors"][:5]:
             messages.warning(request, err)

@@ -2,7 +2,7 @@
 {% block title %}Proposal templates{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Proposal templates</h1><div class="sub">Reusable section outlines. New proposals copy a template's sections so they can be edited freely.</div></div>
-<div class="actions"><a class="btn btn-primary" href="{% url 'template_create' %}">+ New template</a></div></div>
+<div class="actions"><a class="btn btn-primary" href="{% url 'template_create' %}">{% include "includes/icons.html" with name="plus" %} New template</a></div></div>
 <div class="grid grid-3">
 {% for t in templates %}
   <div class="card"><div class="card-body">

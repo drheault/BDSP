@@ -2,13 +2,14 @@
 {% block title %}{{ template.name }}{% endblock %}
 {% block content %}
 <div class="page-head"><div><div class="crumbs"><a href="{% url 'template_list' %}">Templates</a> /</div><h1>{{ template.name }}</h1><div class="sub">Edit the outline and default wording. Changes apply to proposals created from now on.</div></div>
-<div class="actions"><form method="post" action="{% url 'template_duplicate' template.pk %}">{% csrf_token %}<button class="btn">Duplicate</button></form>
-<form method="post" action="{% url 'template_delete' template.pk %}" data-confirm="Delete this template? Existing proposals keep their sections.">{% csrf_token %}<button class="btn btn-danger">Delete</button></form></div></div>
+<div class="actions"><details class="menu"><summary class="btn btn-icon" title="More">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+<form method="post" action="{% url 'template_duplicate' template.pk %}">{% csrf_token %}<button>{% include "includes/icons.html" with name="copy" %} Duplicate template</button></form>
+<hr><form method="post" action="{% url 'template_delete' template.pk %}" data-confirm="Delete this template? Existing proposals keep their sections.">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete template</button></form></div></details></div></div>
 <div class="grid grid-3">
   <div class="span-2">
     <div id="section-list">{% include "proposals/_tsection_list.html" %}</div>
-    <form class="row-flex mt" hx-post="{% url 'tsection_add' template.pk %}" hx-target="#sections" hx-swap="beforeend">
-      <input type="text" name="title" placeholder="New section title…" style="max-width:320px"><button class="btn btn-primary">+ Add section</button></form>
+    <details class="reveal mt"><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} Add section</span></summary>
+      <form class="row-flex reveal-body" hx-post="{% url 'tsection_add' template.pk %}" hx-target="#sections" hx-swap="beforeend"><input type="text" name="title" placeholder="Section title…" style="max-width:360px"><button class="btn btn-primary">Add</button></form></details>
   </div>
   <div class="stack">
     <div class="card"><div class="card-body"><h3>Template settings</h3>

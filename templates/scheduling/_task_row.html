@@ -6,12 +6,11 @@
   <td class="num">{% if t.is_milestone %}—{% else %}{{ t.duration_days }}{% endif %}</td>
   <td style="min-width:70px"><div class="progress" title="{{ t.percent_complete }}%"><i style="width:{{ t.percent_complete }}%"></i></div></td>
   <td><small>{{ t.predecessor.name|default:"—"|truncatechars:22 }}</small></td>
-  <td class="row-actions">
-    <button class="btn btn-xs btn-ghost" title="Earlier 1 week" hx-post="{% url 'task_shift' t.pk %}" hx-vals='{"days": -7}' hx-target="#schedule-panel">−7d</button>
-    <button class="btn btn-xs btn-ghost" title="Later 1 week (with successors)" hx-post="{% url 'task_shift' t.pk %}" hx-vals='{"days": 7, "cascade": 1}' hx-target="#schedule-panel">+7d</button>
-    <button class="btn btn-xs btn-ghost" hx-post="{% url 'task_move' t.pk 'up' %}" hx-target="#schedule-panel">↑</button>
-    <button class="btn btn-xs btn-ghost" hx-post="{% url 'task_move' t.pk 'down' %}" hx-target="#schedule-panel">↓</button>
-    <button class="btn btn-xs" hx-get="{% url 'task_edit' t.pk %}" hx-target="#task-{{ t.pk }}" hx-swap="outerHTML">Edit</button>
-    <button class="btn btn-xs btn-danger" hx-post="{% url 'task_delete' t.pk %}" hx-confirm="Delete “{{ t.name }}”?" hx-target="#schedule-panel">×</button>
-  </td>
+  <td class="row-actions">{% if can.edit_proposals %}<button class="btn btn-xs" hx-get="{% url 'task_edit' t.pk %}" hx-target="#task-{{ t.pk }}" hx-swap="outerHTML">{% include "includes/icons.html" with name="edit" %} Edit</button>
+    <details class="menu"><summary class="btn btn-xs btn-icon" title="More">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+      <button hx-post="{% url 'task_shift' t.pk %}" hx-vals='{"days": -7}' hx-target="#schedule-panel">{% include "includes/icons.html" with name="left" %} One week earlier</button>
+      <button hx-post="{% url 'task_shift' t.pk %}" hx-vals='{"days": 7, "cascade": 1}' hx-target="#schedule-panel">{% include "includes/icons.html" with name="right" %} One week later (with followers)</button>
+      <button hx-post="{% url 'task_move' t.pk 'up' %}" hx-target="#schedule-panel">{% include "includes/icons.html" with name="up" %} Move up</button>
+      <button hx-post="{% url 'task_move' t.pk 'down' %}" hx-target="#schedule-panel">{% include "includes/icons.html" with name="down" %} Move down</button>
+      <hr><button class="danger" hx-post="{% url 'task_delete' t.pk %}" hx-confirm="Delete “{{ t.name }}”?" hx-target="#schedule-panel">{% include "includes/icons.html" with name="trash" %} Delete task</button></div></details>{% endif %}</td>
 </tr>

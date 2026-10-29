@@ -45,27 +45,74 @@ def _dec(s):
         return None
 
 
-def _normalise(headers):
+def _normalise(headers, overrides=None):
+    """Map source headers to canonical names. `overrides` is {canonical: source header}
+    from the connector settings and wins over the built-in aliases."""
     out = {}
+    overrides = {k: (v or "").strip().lower() for k, v in (overrides or {}).items() if v}
     for h in headers:
         key = (h or "").strip().lower()
+        for canon, src in overrides.items():
+            if key == src:
+                out[h] = canon
+        if h in out:
+            continue
         for canon, names in ALIASES.items():
             if key in names:
                 out[h] = canon
     return out
 
 
-def import_csv(file_obj, source="csv", default_proposal=None):
+def _rows_from_xlsx(raw: bytes):
+    """Read the first sheet of an Excel export; the first non-empty row is the header."""
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+    ws = wb.worksheets[0]
+    rows = ws.iter_rows(values_only=True)
+    headers = None
+    for row in rows:
+        if any(c not in (None, "") for c in row):
+            headers = [str(c).strip() if c is not None else "" for c in row]
+            break
+    if not headers:
+        return [], []
+    out = []
+    for row in rows:
+        if not any(c not in (None, "") for c in row):
+            continue
+        rec = {}
+        for h, c in zip(headers, row):
+            if not h:
+                continue
+            if hasattr(c, "strftime"):
+                c = c.strftime("%Y-%m-%d")
+            rec[h] = "" if c is None else str(c)
+        out.append(rec)
+    return headers, out
+
+
+def read_rows(file_obj, filename: str = ""):
+    """Return (headers, rows) from a CSV or Excel file-like object."""
     raw = file_obj.read()
+    name = (filename or getattr(file_obj, "name", "") or "").lower()
+    if name.endswith((".xlsx", ".xlsm")) or (isinstance(raw, bytes) and raw[:2] == b"PK"):
+        return _rows_from_xlsx(raw)
     text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
     reader = csv.DictReader(io.StringIO(text))
-    mapping = _normalise(reader.fieldnames or [])
+    return reader.fieldnames or [], list(reader)
+
+
+def import_csv(file_obj, source="csv", default_proposal=None, column_map=None, filename=""):
+    """Import a CSV or Excel timesheet export (name kept for backwards compatibility)."""
+    headers, raw_rows = read_rows(file_obj, filename)
+    mapping = _normalise(headers, column_map)
     created, skipped, errors = 0, 0, []
     employees = {e.name.lower(): e for e in Employee.objects.all()}
     ext_ids = {e.initials.lower(): e for e in Employee.objects.exclude(initials="")}
     ext_ids.update({e.external_id.lower(): e for e in Employee.objects.exclude(external_id="")})
 
-    for i, raw_row in enumerate(reader, start=2):
+    for i, raw_row in enumerate(raw_rows, start=2):
         row = {mapping.get(k, k): (v or "").strip() for k, v in raw_row.items() if k is not None}
         date = _parse_date(row.get("date"))
         hours = _dec(row.get("hours"))

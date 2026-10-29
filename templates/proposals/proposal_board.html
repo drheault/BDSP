@@ -2,7 +2,7 @@
 {% block title %}Pipeline board{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Pipeline board</h1><div class="sub">Change a card's stage with the dropdown; cards move on reload.</div></div>
-<div class="actions"><a class="btn" href="{% url 'proposal_list' %}">List view</a><a class="btn btn-primary" href="{% url 'proposal_create' %}">+ New proposal</a></div></div>
+<div class="actions"><a class="btn" href="{% url 'proposal_list' %}">List view</a>{% if can.edit_proposals %}<a class="btn btn-primary" href="{% url 'proposal_create' %}">{% include "includes/icons.html" with name="plus" %} New proposal</a>{% endif %}</div></div>
 <div class="board">
 {% for col in columns %}
   <div class="col"><h3>{{ col.label }} <span class="count">{{ col.items|length }}</span></h3><div class="sum">{{ col.value|money:company.base_currency }}</div>

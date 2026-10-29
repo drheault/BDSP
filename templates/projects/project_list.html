@@ -2,7 +2,7 @@
 {% block title %}Project sheets{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Project sheets</h1><div class="sub">Past tunnels, caverns and underground structures to showcase in proposals.</div></div>
-<div class="actions"><a class="btn btn-primary" href="{% url 'project_create' %}">+ New project sheet</a></div></div>
+<div class="actions">{% if can.manage_projects_library %}<a class="btn btn-primary" href="{% url 'project_create' %}">{% include "includes/icons.html" with name="plus" %} New project sheet</a>{% endif %}</div></div>
 <form class="filters" hx-get="{% url 'project_list' %}" hx-trigger="input changed delay:300ms from:input, change from:select" hx-target="#grid" hx-include="this">
   <input type="search" name="q" placeholder="Search projects…" value="{{ q }}">
   <select name="kind"><option value="">All types</option>{% for k, v in kinds %}<option value="{{ k }}" {% if kind == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>

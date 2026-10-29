@@ -205,3 +205,44 @@ def user_capabilities(user) -> set:
     for role in user.access_roles.all():
         caps.update(role.capabilities or [])
     return caps
+
+
+# ---------------------------------------------------------------------------
+# Appearance themes
+# ---------------------------------------------------------------------------
+class Theme(models.Model):
+    """A saved look: CSS variables + optional custom CSS. One theme is active."""
+
+    name = models.CharField(max_length=80, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    based_on = models.CharField(max_length=30, blank=True, help_text="Preset key this theme was copied from.")
+    variables = models.JSONField(default=dict, blank=True)
+    custom_css = models.TextField(blank=True, help_text="Extra CSS appended after the theme variables.")
+    is_active = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_active:
+            Theme.objects.exclude(pk=self.pk).update(is_active=False)
+
+    @classmethod
+    def active(cls):
+        return cls.objects.filter(is_active=True).first()
+
+    def css(self) -> str:
+        from .themes import PRESETS, DEFAULT_PRESET
+
+        base = dict(PRESETS[DEFAULT_PRESET]["vars"])
+        base.update(self.variables or {})
+        decl = ";".join(f"--{k}:{v}" for k, v in base.items() if v)
+        return f":root{{{decl}}}\n{self.custom_css or ''}"
+
+    def export(self) -> dict:
+        return {"name": self.name, "description": self.description, "based_on": self.based_on, "variables": self.variables, "custom_css": self.custom_css}

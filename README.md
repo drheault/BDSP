@@ -46,6 +46,7 @@ the production variables.
 | **Project numbers & phases** | `B-ON601` in business development → `601C` consulting → `601D` design development → `601E` execution. Region codes (2-letter province/state, 3-letter country) and the sequence counter are managed in settings; the number is assigned once and the letter changes with the phase. Required before a proposal can be marked won; every change is logged |
 | **Records & files** | Per project: the file-server folder path (from a template) and a register of site-visit reports, photo dumps, monitoring data and progress rates with their SMB paths. Progress rates are averaged to feed future estimates |
 | **Roles & users** | Partners, Associates, Engineers, HR-Global, HR-Local, IT, Admins seeded; create, edit or delete roles and tick capabilities (see costs, approve won, change phase, manage settings…). Pages, buttons and columns follow the capabilities |
+| **Appearance** | Four built-in styles (Classic navy, Light & airy, Engineering slate, Large & high contrast). Apply one for all users, copy and customise colours/fonts with a live preview, add custom CSS, import/export themes as JSON. Per-user text-size control in the account menu |
 | **Integrations** | Office Timesheets sync: watched export folder or HTTP endpoint, phase filter, duplicate protection, run history, "Sync now" and a schedulable command. HCL Notes placeholder |
 | **Suggestions** | While naming a work item, similar items from won projects appear with their estimated and booked hours; one click creates the item re-priced at current rates |
 | **Actuals** | Per won project: estimate vs. booked hours and cost by work item and by person; manual time entries; CSV import (Office Timesheets export format) |
@@ -100,9 +101,19 @@ htmx is loaded from unpkg; to self-host, drop `htmx.min.js` into `static/js/`
    files, rows created, duplicates skipped and errors. Rows are matched by
    project number, employee name / external ID, and work-item name or code.
    One-off files can still be imported on a proposal's *Actuals* tab or with
-   `python manage.py import_timesheets export.csv --source ots`.
+   `python manage.py import_timesheets export.xlsx --source ots`. CSV and Excel
+   exports are both accepted; if the report's column names differ from the
+   built-in aliases, map them once in the connector's *Column map* field.
 2. **Adopt**: staff book time directly in BDSP against work items.
 3. **Replace**: retire the connector.
+
+## Interface principles
+
+Large readable type, high contrast, few visible controls. Secondary actions
+sit behind a "…" menu on each row or card; add-forms open on request; Export
+is one menu. Every colour, font and size is a CSS variable set by the active
+theme (`core/themes.py` holds the presets), so the look can change without
+touching templates.
 
 ## Permissions
 

@@ -244,7 +244,7 @@ def proposal_status(request, pk):
 
 
 @login_required
-@require_cap("edit_proposals")
+@require_cap("approve_won")
 @require_POST
 def proposal_delete(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)

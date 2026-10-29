@@ -5,7 +5,7 @@ from timesheets.importer import import_csv
 
 
 class Command(BaseCommand):
-    help = "Import a timesheet CSV into actual entries (matched by project number)."
+    help = "Import a timesheet CSV or Excel export into actual entries (matched by project number)."
 
     def add_arguments(self, parser):
         parser.add_argument("path")
@@ -19,7 +19,7 @@ class Command(BaseCommand):
             if not default:
                 raise CommandError("Unknown proposal number")
         with open(opts["path"], "rb") as f:
-            result = import_csv(f, source=opts["source"], default_proposal=default)
+            result = import_csv(f, source=opts["source"], default_proposal=default, filename=opts["path"])
         self.stdout.write(f"Created {result['created']}, skipped {result['skipped']} duplicates.")
         for e in result["errors"]:
             self.stderr.write(e)

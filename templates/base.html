@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}BDSP{% endblock %} · {{ company.name|default:"BDSP" }}</title>
   <link rel="icon" href="{% if company and company.logo %}{{ company.logo.url }}{% else %}{% static 'img/logo-default.svg' %}{% endif %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
-  {% if company %}<style>:root{--navy:{{ company.primary_color }};--accent:{{ company.accent_color }};}</style>{% endif %}
+  {% if theme_css %}<style id="theme-css">{{ theme_css|safe }}</style>{% elif company %}<style>:root{--navy:{{ company.primary_color }};--accent:{{ company.accent_color }};}</style>{% endif %}
+  <script>try{var t=localStorage.getItem("bdsp-text");if(t)document.documentElement.setAttribute("data-text",t)}catch(e){}</script>
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <script>if(!window.htmx){document.write('<script src="{% static 'js/htmx.min.js' %}"><\/script>')}</script>
   {% block head %}{% endblock %}
@@ -42,14 +44,18 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M4 19a2 2 0 0 0 2 2h14M9 7h6"/></svg>Services &amp; rates</a>
       {% if can.manage_settings %}<a href="{% url 'company_settings' %}" class="{% if url_name == 'company_settings' %}active{% endif %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Company settings</a>{% endif %}
+      {% if can.manage_settings %}<a href="{% url 'appearance' %}" class="{% if url_name|slice:':10' == 'appearance' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor"/><path d="M12 21c-1.5 0-2-1.5-1-2.5s2-1.5 3.5-1.5H16a3 3 0 0 0 0-6"/></svg>Appearance</a>{% endif %}
       {% if can.manage_integrations %}<a href="{% url 'integrations' %}" class="{% if url_name == 'integrations' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>Integrations</a>{% endif %}
       {% if can.manage_users %}<a href="{% url 'roles' %}" class="{% if url_name in 'roles,role_create,role_edit,users,user_create,user_edit' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Roles &amp; users</a>{% endif %}
       {% if user.is_staff %}<a href="{% url 'admin:index' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7z"/></svg>Admin</a>{% endif %}
     </nav>
     {% endwith %}
     <div class="user">
-      <span>{{ user.get_full_name|default:user.username }}</span>
-      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+      <span title="{{ user.username }}">{{ user.get_full_name|default:user.username }}</span>
+      <details class="menu"><summary class="btn btn-sm btn-icon" title="Account & display">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+        <div class="muted" style="padding:.3rem .7rem 0;font-size:.78rem">Text size</div>
+        <div class="group"><button type="button" onclick="setText('')">Normal</button><button type="button" onclick="setText('large')">Large</button><button type="button" onclick="setText('xlarge')">Larger</button></div>
+        <hr><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
     </div>
   </aside>
   <main class="main">
@@ -61,6 +67,10 @@
 <div class="messages">{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}</div>
 {% endif %}
 <script>
+  function setText(v){try{if(v){localStorage.setItem("bdsp-text",v);document.documentElement.setAttribute("data-text",v)}else{localStorage.removeItem("bdsp-text");document.documentElement.removeAttribute("data-text")}}catch(e){}}
+  // Close open menus after a click inside them or on Escape.
+  document.addEventListener("click", function (e) { var m = e.target.closest(".menu-items"); if (m && e.target.closest("a,button")) { setTimeout(function(){ m.closest("details").removeAttribute("open"); }, 0); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") document.querySelectorAll("details.menu[open]").forEach(function (d) { d.removeAttribute("open"); }); });
   // Confirm destructive htmx actions and plain forms with data-confirm.
   document.addEventListener("submit", function (e) {
     var msg = e.target.getAttribute("data-confirm");

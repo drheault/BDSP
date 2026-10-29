@@ -12,8 +12,9 @@ from django.views.decorators.http import require_POST
 from proposals.models import Proposal
 from scheduling.models import Task
 
-from .forms import AccessRoleForm, CompanyProfileForm, CurrencyForm, RegionForm, UserForm
-from .models import CAPABILITIES, AccessRole, CompanyProfile, Currency, Region
+from .forms import AccessRoleForm, CompanyProfileForm, CurrencyForm, RegionForm, ThemeForm, ThemeImportForm, UserForm
+from .models import CAPABILITIES, AccessRole, CompanyProfile, Currency, Region, Theme
+from .themes import DEFAULT_PRESET, PRESETS
 from .permissions import require_cap
 
 User = get_user_model()
@@ -280,3 +281,106 @@ def metrics(request):
             "accuracy": accuracy, "avg_hv": avg_hv,
         },
     )
+
+
+# ---- appearance / themes ---------------------------------------------------------
+@login_required
+@require_cap("manage_settings")
+def appearance(request):
+    return render(request, "core/appearance.html", {"presets": PRESETS, "themes": Theme.objects.all(), "active": Theme.active(), "import_form": ThemeImportForm()})
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def theme_from_preset(request, key):
+    preset = PRESETS.get(key)
+    if not preset:
+        messages.error(request, "Unknown preset.")
+        return redirect("appearance")
+    name = preset["name"]
+    i = 2
+    while Theme.objects.filter(name=name).exists():
+        name = f"{preset['name']} {i}"
+        i += 1
+    theme = Theme.objects.create(name=name, description=preset["description"], based_on=key, variables=dict(preset["vars"]), is_active=request.POST.get("activate") == "1")
+    messages.success(request, f"Theme “{theme.name}” created{' and applied' if theme.is_active else ''}.")
+    return redirect("theme_edit", pk=theme.pk) if request.POST.get("edit") else redirect("appearance")
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def theme_activate(request, pk):
+    theme = get_object_or_404(Theme, pk=pk)
+    theme.is_active = True
+    theme.save()
+    messages.success(request, f"“{theme.name}” is now the active look.")
+    return redirect("appearance")
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def theme_reset(request):
+    Theme.objects.update(is_active=False)
+    messages.success(request, "Back to the built-in default look.")
+    return redirect("appearance")
+
+
+@login_required
+@require_cap("manage_settings")
+def theme_edit(request, pk):
+    theme = get_object_or_404(Theme, pk=pk)
+    form = ThemeForm(request.POST or None, instance=theme)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Theme saved.")
+        return redirect("theme_edit", pk=pk)
+    return render(request, "core/theme_form.html", {"form": form, "theme": theme, "preview_css": theme.css()})
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def theme_delete(request, pk):
+    theme = get_object_or_404(Theme, pk=pk)
+    theme.delete()
+    messages.success(request, "Theme deleted.")
+    return redirect("appearance")
+
+
+@login_required
+@require_cap("manage_settings")
+def theme_export(request, pk):
+    import json
+
+    from django.http import JsonResponse
+
+    theme = get_object_or_404(Theme, pk=pk)
+    resp = JsonResponse(theme.export(), json_dumps_params={"indent": 2})
+    resp["Content-Disposition"] = f'attachment; filename="theme-{theme.name.lower().replace(" ", "-")}.json"'
+    return resp
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def theme_import(request):
+    import json
+
+    form = ThemeImportForm(request.POST, request.FILES)
+    if not form.is_valid():
+        messages.error(request, "Choose a JSON file.")
+        return redirect("appearance")
+    try:
+        data = json.loads(form.cleaned_data["file"].read().decode("utf-8-sig"))
+        name = str(data.get("name") or "Imported theme")[:80]
+        variables = {k: str(v)[:200] for k, v in (data.get("variables") or {}).items() if isinstance(k, str)}
+        theme, created = Theme.objects.update_or_create(
+            name=name, defaults={"description": str(data.get("description") or "")[:200], "based_on": str(data.get("based_on") or "")[:30], "variables": variables, "custom_css": str(data.get("custom_css") or "")[:20000]}
+        )
+        messages.success(request, f"Theme “{theme.name}” {'imported' if created else 'updated'}.")
+    except (ValueError, AttributeError) as e:
+        messages.error(request, f"Could not read theme file: {e}")
+    return redirect("appearance")

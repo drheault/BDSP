@@ -7,7 +7,7 @@
     <div class="card"><div class="card-head"><h3>Office Timesheets → actuals</h3>
       <form method="post" action="{% url 'integrations_sync' %}">{% csrf_token %}<button class="btn btn-accent">Sync now</button></form></div>
       <div class="card-body">
-        <p class="muted">Strategy: <strong>sync</strong> (now) → <strong>adopt</strong> (staff book time here) → <strong>replace</strong>. Each sync imports new rows, matches them to projects by project number, to people by name or external ID, and to work items by name or code. Duplicates are skipped by row ID. Only projects in the selected phases receive hours.</p>
+        <p class="muted">Strategy: <strong>sync</strong> (now) → <strong>adopt</strong> (staff book time here) → <strong>replace</strong>. Each sync reads new CSV or Excel exports, matches rows to projects by project number, to people by name or external ID, and to work items by name or code. Duplicates are skipped by row ID. Only projects in the selected phases receive hours.</p>
         <form method="post" class="stack">{% csrf_token %}
           <div class="form-grid">
             {% include "includes/field.html" with field=form.name %}{% include "includes/field.html" with field=form.transport %}
@@ -15,6 +15,7 @@
             {% include "includes/field.html" with field=form.base_url extra_class="full" %}
             {% include "includes/field.html" with field=form.api_key %}{% include "includes/field.html" with field=form.username %}{% include "includes/field.html" with field=form.password %}
             {% include "includes/field.html" with field=form.only_phases %}{% include "includes/field.html" with field=form.lookback_days %}
+            {% include "includes/field.html" with field=form.column_map extra_class="full" %}
             {% include "includes/field.html" with field=form.is_enabled extra_class="full" %}
           </div>
           <div class="form-actions"><button class="btn btn-primary">Save connector</button></div>
