@@ -1,0 +1,10 @@
+<table class="tbl"><thead><tr><th>Code</th><th>Name</th><th>Symbol</th><th class="num">Rate to {{ profile.base_currency.code }}</th><th></th></tr></thead><tbody>
+{% for currency in currencies %}{% include "core/_currency_row.html" %}{% empty %}<tr><td colspan="5" class="muted">No currencies.</td></tr>{% endfor %}
+</tbody></table>
+<div class="card-body" style="border-top:1px solid var(--line)"><form hx-post="{% url 'currency_add' %}" hx-target="#currencies" class="inline-form">
+  <div class="field narrow" style="flex-basis:80px"><label>Code</label>{{ currency_form.code }}{% for e in currency_form.code.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+  <div class="field"><label>Name</label>{{ currency_form.name }}</div>
+  <div class="field narrow" style="flex-basis:70px"><label>Symbol</label>{{ currency_form.symbol }}</div>
+  <div class="field narrow"><label>Rate to base</label>{{ currency_form.rate_to_base }}</div>
+  <button class="btn btn-primary btn-sm">Add currency</button></form>
+  <div class="help">Rate to base: how many {{ profile.base_currency.code }} one unit of the currency is worth. Used only for dashboard totals and rate-card conversion; proposals keep their own currency.</div></div>

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Services & rates{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>Services &amp; rates</h1><div class="sub">The service catalogue used as a scope checklist, and billing roles with default hourly rates for fee estimates.</div></div></div>
+<div class="page-head"><div><h1>Services, people &amp; rates</h1><div class="sub">Employees with individual billing rates, role rate card, and the service catalogue. Rates are in {{ company.base_currency.code }} (the base currency).</div></div></div>
+<div class="card mb"><div class="card-head"><h3>Employees &amp; individual rates</h3></div><div id="employees">{% include "proposals/_employee_list.html" %}</div></div>
 <div class="grid grid-2">
+  <div class="card"><div class="card-head"><h3>Role rate card</h3><span class="muted">Used when a line is estimated by role rather than by name</span></div><div id="roles">{% include "proposals/_role_list.html" %}</div></div>
   <div class="card"><div class="card-head"><h3>Service catalogue</h3></div><div id="services">{% include "proposals/_service_list.html" %}</div></div>
-  <div class="card"><div class="card-head"><h3>Staff roles &amp; rates</h3></div><div id="roles">{% include "proposals/_role_list.html" %}</div></div>
 </div>
 {% endblock %}

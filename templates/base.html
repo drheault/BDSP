@@ -74,6 +74,21 @@
     ta.focus(); ta.selectionStart = ta.selectionEnd = s + ph.textContent.length;
   });
 </script>
+<script>
+  // Fee line form: show employee/hours fields for labour, description/qty/markup otherwise.
+  function toggleLineKind(sel) {
+    var form = sel.closest("form"), labour = sel.value === "labour";
+    form.querySelectorAll(".lk-labour").forEach(function (el) { el.hidden = !labour; });
+    form.querySelectorAll(".lk-expense").forEach(function (el) { el.hidden = labour; });
+  }
+  // Fill the rate input when the rate lookup returns.
+  document.addEventListener("htmx:afterSwap", function (e) {
+    if (e.target.classList && e.target.classList.contains("rate-target")) {
+      var form = e.target.closest("form"), inp = form && form.querySelector(".rate-input");
+      if (inp) inp.value = e.target.textContent.trim();
+    }
+  });
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,15 +1,15 @@
-{% extends "base.html" %}{% load humanize %}
+{% extends "base.html" %}{% load humanize %}{% load bdsp %}
 {% block title %}Pipeline board{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Pipeline board</h1><div class="sub">Change a card's stage with the dropdown; cards move on reload.</div></div>
 <div class="actions"><a class="btn" href="{% url 'proposal_list' %}">List view</a><a class="btn btn-primary" href="{% url 'proposal_create' %}">+ New proposal</a></div></div>
 <div class="board">
 {% for col in columns %}
-  <div class="col"><h3>{{ col.label }} <span class="count">{{ col.items|length }}</span></h3><div class="sum">${{ col.value|floatformat:0|intcomma }}</div>
+  <div class="col"><h3>{{ col.label }} <span class="count">{{ col.items|length }}</span></h3><div class="sum">{{ col.value|money:company.base_currency }}</div>
   {% for p in col.items %}
     <div class="kcard" id="kcard-{{ p.pk }}">
       <a class="t" href="{% url 'proposal_detail' p.pk %}">{{ p.title }}</a>
-      <div class="m"><span>{{ p.client|default:"—"|truncatechars:24 }}</span><span>${{ p.fee_total|floatformat:0|intcomma }}</span></div>
+      <div class="m"><span>{{ p.client|default:"—"|truncatechars:24 }}</span><span>{{ p.fee_total|money:p.cur }}</span></div>
       <div class="m"><span class="mono">{{ p.number }}</span><span>{% if p.due_date %}due {{ p.due_date|date:"j M" }}{% endif %}</span></div>
       <form hx-post="{% url 'proposal_status' p.pk %}" hx-trigger="change" hx-swap="none" hx-on::after-request="location.reload()"><select name="status">{% for k, v in p.Status.choices %}<option value="{{ k }}" {% if k == p.status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></form>
     </div>

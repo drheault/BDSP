@@ -1,0 +1,11 @@
+{% load bdsp %}
+<table class="tbl"><thead><tr><th>Name</th><th>Role</th><th class="num">Rate / h</th><th class="num">Cost / h</th><th>Ext. ID</th><th></th></tr></thead><tbody>
+{% for employee in employees %}{% include "proposals/_employee_row.html" %}{% empty %}<tr><td colspan="6" class="muted">No employees yet — add people so estimates can be built per person.</td></tr>{% endfor %}
+</tbody></table>
+<div class="card-body" style="border-top:1px solid var(--line)"><form hx-post="{% url 'employee_add' %}" hx-target="#employees" class="inline-form">
+  <div class="field"><label>Name</label>{{ employee_form.name }}{% for e in employee_form.name.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+  <div class="field"><label>Role</label>{{ employee_form.role }}</div>
+  <div class="field narrow"><label>Rate / h</label>{{ employee_form.rate }}{% for e in employee_form.rate.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+  <div class="field narrow"><label>Cost / h</label>{{ employee_form.cost_rate }}</div>
+  <div class="field narrow"><label>Ext. ID</label>{{ employee_form.external_id }}</div>
+  <button class="btn btn-primary btn-sm">Add employee</button></form></div>

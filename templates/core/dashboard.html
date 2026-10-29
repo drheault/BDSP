@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% load humanize %}
+{% extends "base.html" %}{% load humanize %}{% load bdsp %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -9,12 +9,12 @@
 
 <div class="grid grid-4 mb">
   <div class="card stat"><div class="k">Open pursuits</div><div class="v">{{ open_count }}</div><div class="d">lead → submitted</div></div>
-  <div class="card stat"><div class="k">Pipeline value</div><div class="v">${{ pipeline_value|floatformat:0|intcomma }}</div><div class="d">sum of open fees</div></div>
-  <div class="card stat"><div class="k">Weighted pipeline</div><div class="v">${{ weighted_value|floatformat:0|intcomma }}</div><div class="d">fee × probability</div></div>
+  <div class="card stat"><div class="k">Pipeline value</div><div class="v">{{ pipeline_value|money:base }}</div><div class="d">open fees, in {{ base.code }}</div></div>
+  <div class="card stat"><div class="k">Weighted pipeline</div><div class="v">{{ weighted_value|money:base }}</div><div class="d">fee × probability</div></div>
   <div class="card stat"><div class="k">Win rate</div><div class="v">{% if win_rate is not None %}{{ win_rate }}%{% else %}—{% endif %}</div><div class="d">{{ won }} won · {{ lost }} lost</div></div>
 </div>
 
-<div class="pipeline mb">
+<div class="pipeline mb" style="grid-template-columns:repeat(8,1fr)">
   {% for s in pipeline %}<a href="{% url 'proposal_list' %}?status={{ s.key }}"><div class="n">{{ s.count }}</div><div class="l">{{ s.label }}</div></a>{% endfor %}
 </div>
 
@@ -25,7 +25,7 @@
     <table class="tbl"><thead><tr><th>No.</th><th>Title</th><th>Client</th><th>Status</th><th class="num">Fee</th><th>Due</th></tr></thead><tbody>
       {% for p in recent %}
       <tr><td class="mono">{{ p.number }}</td><td><a class="strong" href="{% url 'proposal_detail' p.pk %}">{{ p.title }}</a><br><small>{{ p.get_service_type_display }}{% if p.owner %} · {{ p.owner.get_full_name|default:p.owner.username }}{% endif %}</small></td>
-      <td>{{ p.client|default:"—" }}</td><td>{% include "proposals/_status_badge.html" with proposal=p %}</td><td class="num">${{ p.fee_total|floatformat:0|intcomma }}</td>
+      <td>{{ p.client|default:"—" }}</td><td>{% include "proposals/_status_badge.html" with proposal=p %}</td><td class="num">{{ p.fee_total|money:p.cur }}</td>
       <td>{% if p.due_date %}<span class="{% if p.is_open and p.days_to_due < 0 %}due-bad{% elif p.is_open and p.days_to_due <= 7 %}due-warn{% endif %}">{{ p.due_date|date:"j M" }}</span>{% else %}—{% endif %}</td></tr>
       {% endfor %}
     </tbody></table>
@@ -39,6 +39,10 @@
         {% for p in due_soon %}<tr><td><a href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:38 }}</a><br><small>{{ p.client|default:"" }}</small></td><td class="right {% if p.days_to_due <= 7 %}due-warn{% endif %}">{{ p.due_date|date:"j M" }}<br><small>{{ p.days_to_due }}d</small></td></tr>{% endfor %}
       </tbody></table>{% else %}<div class="empty">Nothing due soon.</div>{% endif %}
     </div>
+    {% if active_projects %}<div class="card">
+      <div class="card-head"><h3>Active projects</h3><span class="muted">estimate vs booked</span></div>
+      <table class="tbl"><tbody>{% for p in active_projects %}<tr><td><a href="{% url 'proposal_actuals' p.pk %}">{{ p.title|truncatechars:34 }}</a><br><small class="mono">{{ p.project_number|default:p.number }}</small></td><td class="right">{{ p.actual_hours|num:0 }} / {{ p.total_hours|num:0 }} h{% if p.hours_variance_pct is not None %}<br><small class="var-{{ p.hours_variance_pct|pct_class }}">{{ p.hours_variance_pct }}%</small>{% endif %}</td></tr>{% endfor %}</tbody></table>
+    </div>{% endif %}
     <div class="card">
       <div class="card-head"><h3>Upcoming milestones</h3><a class="btn btn-sm" href="{% url 'programme' %}">Programme</a></div>
       {% if upcoming_milestones %}<table class="tbl"><tbody>

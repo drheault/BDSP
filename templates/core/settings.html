@@ -1,10 +1,11 @@
 {% extends "base.html" %}{% load static %}
-{% block title %}Company & logo{% endblock %}
+{% block title %}Company settings{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>Company &amp; logo</h1><div class="sub">Identity used in the sidebar, proposal covers and project sheets.</div></div></div>
+<div class="page-head"><div><h1>Company settings</h1><div class="sub">Identity, logo, currencies and the project-number format used across proposals.</div></div></div>
 <form method="post" enctype="multipart/form-data">{% csrf_token %}
 <div class="grid grid-3">
   <div class="card span-2"><div class="card-body">
+    <h3>Identity</h3>
     <div class="form-grid">
       {% include "includes/field.html" with field=form.name %}
       {% include "includes/field.html" with field=form.tagline %}
@@ -12,15 +13,21 @@
       {% include "includes/field.html" with field=form.phone %}
       {% include "includes/field.html" with field=form.email %}
       {% include "includes/field.html" with field=form.website %}
+      {% include "includes/field.html" with field=form.default_currency %}
       {% include "includes/field.html" with field=form.proposal_prefix %}
       {% include "includes/field.html" with field=form.proposal_footer extra_class="full" %}
     </div>
     <h3 class="mt">Brand colours</h3>
-    <div class="row-flex">
-      {% include "includes/field.html" with field=form.primary_color %}
-      {% include "includes/field.html" with field=form.accent_color %}
+    <div class="row-flex">{% include "includes/field.html" with field=form.primary_color %}{% include "includes/field.html" with field=form.accent_color %}</div>
+    <h3 class="mt">Project number format</h3>
+    <p class="muted">Every won proposal needs an official project number that matches your file-server and HCL Notes classification. Define the format as a regular expression; the app refuses numbers that do not match.</p>
+    <div class="form-grid">
+      {% include "includes/field.html" with field=form.project_number_pattern %}
+      {% include "includes/field.html" with field=form.project_number_example %}
+      {% include "includes/field.html" with field=form.project_number_help extra_class="full" %}
+      {% include "includes/field.html" with field=form.require_project_number_when_won extra_class="full" %}
     </div>
-    <div class="form-actions"><button class="btn btn-primary" type="submit">Save profile</button></div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Save settings</button></div>
   </div></div>
   <div class="card"><div class="card-body">
     <h3>Logo</h3>
@@ -28,9 +35,10 @@
       {% if profile.logo %}<img src="{{ profile.logo.url }}" alt="Current logo" style="max-height:120px;max-width:100%">{% else %}<img src="{% static 'img/logo-default.svg' %}" style="height:80px"><div class="muted mt-sm">Placeholder — upload yours</div>{% endif %}
     </div>
     {{ form.logo }}
-    <div class="help">PNG or SVG with transparent background works best. Shown at ~40px in the sidebar and ~70px on proposal covers.</div>
+    <div class="help">PNG or SVG with transparent background works best. Shown in the sidebar, proposal covers, Word and PDF exports.</div>
     {% if profile.logo %}<label class="row-flex mt-sm" style="font-size:.85rem"><input type="checkbox" name="remove_logo" value="1"> Remove current logo</label>{% endif %}
   </div></div>
 </div>
 </form>
+<div class="card mt"><div class="card-head"><h3>Currencies</h3><span class="muted">Default: {{ profile.base_currency.code }}</span></div><div id="currencies">{% include "core/_currency_list.html" %}</div></div>
 {% endblock %}

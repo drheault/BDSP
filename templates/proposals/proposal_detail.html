@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% load humanize %}
+{% extends "base.html" %}{% load humanize %}{% load bdsp %}
 {% block title %}{{ proposal.number }} {{ proposal.title }}{% endblock %}
 {% block content %}
 {% include "proposals/_proposal_header.html" %}
@@ -8,6 +8,8 @@
     {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     <div class="form-grid">
       {% include "includes/field.html" with field=form.title extra_class="full" %}
+      {% include "includes/field.html" with field=form.project_number %}
+      {% include "includes/field.html" with field=form.currency %}
       <div class="field"><label for="{{ form.client.id_for_label }}">Client</label>
         <select name="client" id="{{ form.client.id_for_label }}" hx-get="{% url 'contact_options' %}" hx-target="#{{ form.contact.id_for_label }}" hx-trigger="change" hx-include="this">
           <option value="">— none —</option>{% for c in form.fields.client.queryset %}<option value="{{ c.pk }}" {% if form.client.value|stringformat:"s" == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
@@ -16,6 +18,7 @@
       {% include "includes/field.html" with field=form.service_type %}
       {% include "includes/field.html" with field=form.owner %}
       {% include "includes/field.html" with field=form.status %}
+      {% include "includes/field.html" with field=form.project_status %}
       {% include "includes/field.html" with field=form.due_date %}
       {% include "includes/field.html" with field=form.probability %}
       {% include "includes/field.html" with field=form.location %}
@@ -35,9 +38,9 @@
     <div class="card"><div class="card-body">
       <h3>At a glance</h3>
       <div class="kv">
-        <span class="k">Fee</span><span><strong>${{ proposal.fee_total|floatformat:0|intcomma }}</strong>{% if proposal.manual_value is not None %} <small>(manual)</small>{% endif %}</span>
-        <span class="k">Weighted</span><span>${{ proposal.weighted_value|floatformat:0|intcomma }} at {{ proposal.probability }}%</span>
-        <span class="k">Hours</span><span>{{ proposal.total_hours|floatformat:0 }} h</span>
+        <span class="k">Fee</span><span><strong>{{ proposal.fee_total|money:proposal.cur }}</strong>{% if proposal.manual_value is not None %} <small>(manual)</small>{% endif %}</span>
+        <span class="k">Weighted</span><span>{{ proposal.weighted_value|money:proposal.cur }} at {{ proposal.probability }}%</span>
+        <span class="k">Hours</span><span>{{ proposal.total_hours|num:0 }} h</span>{% if proposal.actual_hours %}<span class="k">Booked</span><span>{{ proposal.actual_hours|num:0 }} h</span>{% endif %}
         <span class="k">Sections</span><span>{{ proposal.sections.count }}</span>
         <span class="k">Schedule</span><span>{{ proposal.tasks.count }} item{{ proposal.tasks.count|pluralize }}</span>
         <span class="k">Template</span><span>{{ proposal.template|default:"—" }}</span>

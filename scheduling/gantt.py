@@ -24,7 +24,8 @@ def _monday(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
-def build_gantt(items, today=None):
+def build_gantt(items, today=None, max_width=None):
+    """`max_width` forces the chart to fit a fixed width (used for paged exports)."""
     items = list(items)
     if not items:
         return None
@@ -34,7 +35,10 @@ def build_gantt(items, today=None):
     end = max(t.end for t in items)
     end = _monday(end) + timedelta(days=13)  # pad ~2 weeks after the last bar
     total_days = (end - start).days + 1
-    day_px = max(MIN_DAY_PX, min(MAX_DAY_PX, TARGET_W / total_days))
+    if max_width:
+        day_px = max(0.4, min(MAX_DAY_PX, (max_width - LABEL_W - PAD_RIGHT) / total_days))
+    else:
+        day_px = max(MIN_DAY_PX, min(MAX_DAY_PX, TARGET_W / total_days))
 
     def x_of(d: date) -> float:
         return LABEL_W + (d - start).days * day_px

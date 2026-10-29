@@ -1,7 +1,7 @@
-{% extends "base.html" %}{% load humanize %}
+{% extends "base.html" %}{% load humanize bdsp %}
 {% block title %}Metrics{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>BD metrics</h1><div class="sub">Win/loss analysis across {{ decided_count }} decided pursuit{{ decided_count|pluralize }} · ${{ total_value_won|floatformat:0|intcomma }} won</div></div></div>
+<div class="page-head"><div><h1>BD metrics</h1><div class="sub">Win/loss analysis across {{ decided_count }} decided pursuit{{ decided_count|pluralize }} · {{ total_value_won|money:base }} won</div></div></div>
 {% if not decided_count %}<div class="callout mb">No proposals have been marked won or lost yet. Metrics fill in as pursuits are decided.</div>{% endif %}
 <div class="grid grid-2">
   <div class="card"><div class="card-head"><h3>Win rate by client sector</h3></div><div class="card-body">
@@ -17,5 +17,9 @@
     {% if monthly %}<div class="cols">{% for m in monthly %}<div class="c" title="{{ m.n }} submitted"><b style="height:{% widthratio m.n max_month 100 %}%"></b><span>{{ m.submitted_at__month }}/{{ m.submitted_at__year|slice:"2:" }}</span></div>{% endfor %}</div>{% else %}<span class="muted">No submissions recorded yet.</span>{% endif %}
   </div></div>
 </div>
-<div class="callout mt">Roadmap: once timesheets are connected, this page will compare estimated vs. actual hours per role and per phase, and surface which pursuit types are most profitable.</div>
+<div class="card mt"><div class="card-head"><h3>Estimate accuracy on won projects</h3>{% if avg_hv is not None %}<span class="muted">average hours variance <strong class="var-{{ avg_hv|pct_class }}">{{ avg_hv|floatformat:1 }}%</strong></span>{% endif %}</div>
+  {% if accuracy %}<table class="tbl"><thead><tr><th>Project</th><th class="num">Est. h</th><th class="num">Actual h</th><th class="num">Variance</th><th class="num">Est. cost</th><th class="num">Actual cost</th><th class="num">Variance</th></tr></thead><tbody>
+  {% for a in accuracy %}<tr><td><a href="{% url 'proposal_actuals' a.p.pk %}">{{ a.p.title|truncatechars:50 }}</a><br><small class="mono">{{ a.p.project_number|default:a.p.number }}</small></td><td class="num">{{ a.est_h|num:0 }}</td><td class="num">{{ a.act_h|num:0 }}</td><td class="num var-{{ a.hv|pct_class }}">{{ a.hv }}%</td><td class="num">{{ a.est_c|money:a.p.cur }}</td><td class="num">{{ a.act_c|money:a.p.cur }}</td><td class="num var-{{ a.cv|pct_class }}">{{ a.cv }}%</td></tr>{% endfor %}
+  </tbody></table>{% else %}<div class="empty">No won projects with booked hours yet. Import timesheets on a won proposal's Actuals tab and the comparison appears here.</div>{% endif %}
+</div>
 {% endblock %}

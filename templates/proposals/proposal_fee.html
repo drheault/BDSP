@@ -1,21 +1,29 @@
-{% extends "base.html" %}{% load humanize %}
+{% extends "base.html" %}{% load bdsp %}
 {% block title %}{{ proposal.number }} fee{% endblock %}
 {% block content %}
 {% include "proposals/_proposal_header.html" %}
 <div class="grid grid-3">
-  <div class="card span-2"><div class="card-head"><h3>Labour build-up</h3><span class="muted">Rates default from <a href="{% url 'library' %}">Services &amp; rates</a></span></div>
-    <div id="staffing">{% include "proposals/_staffing_table.html" %}</div>
-  </div>
+  <div class="span-2" id="fee-panel">{% include "proposals/_fee_panel.html" %}</div>
   <div class="stack">
     <div id="fee-summary">{% include "proposals/_fee_summary.html" %}</div>
     <div class="card"><div class="card-body">
-      <h3>Expenses &amp; overrides</h3>
-      <form hx-post="{% url 'proposal_fee' proposal.pk %}" hx-target="#fee-summary" hx-swap="innerHTML" class="stack">
-        {% include "includes/field.html" with field=fee_form.expenses %}
-        {% include "includes/field.html" with field=fee_form.markup_percent %}
+      <h3>Currency, contingency &amp; override</h3>
+      <form method="post" action="{% url 'proposal_fee' proposal.pk %}" class="stack">{% csrf_token %}
+        {% include "includes/field.html" with field=fee_form.currency %}
+        {% include "includes/field.html" with field=fee_form.contingency_percent %}
         {% include "includes/field.html" with field=fee_form.manual_value %}
-        <button class="btn btn-primary">Update</button>
+        <button class="btn btn-primary">Save</button>
+        <div class="help">Rates on the <a href="{% url 'library' %}">rate card</a> are in {{ company.base_currency.code }}; they are converted into {{ proposal.cur.code }} when a line is added. Change the exchange rates under <a href="{% url 'company_settings' %}">Company settings</a>.</div>
       </form>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <h3>How to build the estimate</h3>
+      <ol style="padding-left:1.1rem;margin:0;font-size:.88rem;line-height:1.7">
+        <li>Add <strong>work items</strong> — drawings, reports, design tasks, meetings.</li>
+        <li>Inside each item add <strong>lines</strong>: a person × hours, or an expense, software licence or subconsultant.</li>
+        <li>Rates fill in automatically from the employee or role; override per line if needed.</li>
+        <li>Watch the <strong>suggestions</strong> that appear as you type an item name — they come from won projects.</li>
+      </ol>
     </div></div>
   </div>
 </div>

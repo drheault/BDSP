@@ -1,0 +1,14 @@
+<tr id="line-{{ line.pk }}"><td colspan="7">
+  <form hx-post="{% url 'line_edit' line.pk %}" hx-target="#fee-panel" class="inline-form" hx-on::after-request="if(event.detail.successful){htmx.ajax('GET','{% url 'fee_summary' line.item.proposal_id %}',{target:'#fee-summary'})}">
+    <div class="field narrow" style="flex-basis:130px"><label>Type</label>{{ form.kind }}</div>
+    <div class="field"><label>Employee</label>{{ form.employee }}</div>
+    <div class="field narrow"><label>Role</label>{{ form.role }}</div>
+    <div class="field"><label>Description</label>{{ form.description }}</div>
+    <div class="field narrow" style="flex-basis:80px"><label>Hours</label>{{ form.hours }}</div>
+    <div class="field narrow" style="flex-basis:80px"><label>Qty</label>{{ form.quantity }}</div>
+    <div class="field narrow" style="flex-basis:110px"><label>Rate / unit</label>{{ form.unit_cost }}</div>
+    <div class="field narrow" style="flex-basis:80px"><label>Markup %</label>{{ form.markup_percent }}</div>
+    <button class="btn btn-primary btn-sm">Save</button>
+    <button type="button" class="btn btn-ghost btn-sm" hx-get="{% url 'line_row' line.pk %}" hx-target="#line-{{ line.pk }}" hx-swap="outerHTML">Cancel</button>
+  </form>{% if form.errors %}<div class="errorlist">{{ form.errors }}</div>{% endif %}
+</td></tr>

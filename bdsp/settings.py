@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "proposals",
     "scheduling",
     "projects",
+    "timesheets",
 ]
 
 MIDDLEWARE = [
@@ -66,11 +67,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "bdsp.wsgi.application"
 
+# Postgres in production via DATABASE_URL (e.g. postgres://bdsp:bdsp@localhost:5432/bdsp);
+# SQLite for a zero-setup local run.
+import dj_database_url
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"),
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{os.environ.get('DJANGO_DB_PATH', BASE_DIR / 'db.sqlite3')}",
+        conn_max_age=600,
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [

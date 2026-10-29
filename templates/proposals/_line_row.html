@@ -1,0 +1,10 @@
+{% load bdsp %}<tr id="line-{{ line.pk }}">
+  <td><span class="badge {% if line.kind == 'labour' %}badge-design{% else %}badge-construction{% endif %}">{{ line.get_kind_display }}</span></td>
+  <td>{% if line.kind == 'labour' %}<strong>{{ line.label }}</strong>{% if line.employee and line.role %} <small class="muted">{{ line.role }}</small>{% endif %}{% if line.description %}<br><small>{{ line.description }}</small>{% endif %}{% else %}{{ line.description }}{% endif %}</td>
+  <td class="num">{% if line.kind == 'labour' %}{{ line.hours|num:1 }} h{% else %}{{ line.quantity|num:2 }}{% endif %}</td>
+  <td class="num">{{ line.unit_cost|money2:line.item.proposal.cur }}</td>
+  <td class="num">{% if line.kind != 'labour' and line.markup_percent %}{{ line.markup_percent|num:1 }}%{% else %}—{% endif %}</td>
+  <td class="num"><strong>{{ line.amount|money:line.item.proposal.cur }}</strong></td>
+  <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'line_edit' line.pk %}" hx-target="#line-{{ line.pk }}" hx-swap="outerHTML">Edit</button>
+  <button class="btn btn-xs btn-danger" hx-post="{% url 'line_delete' line.pk %}" hx-target="#fee-panel" hx-on::after-request="htmx.ajax('GET','{% url 'fee_summary' line.item.proposal_id %}',{target:'#fee-summary'})">×</button></td>
+</tr>

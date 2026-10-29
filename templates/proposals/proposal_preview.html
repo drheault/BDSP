@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% load humanize static %}
+{% extends "base.html" %}{% load humanize static bdsp %}
 {% block title %}{{ proposal.number }} preview{% endblock %}
 {% block head %}<style>:root{--doc-primary:{{ company.primary_color }};--doc-accent:{{ company.accent_color }}}</style>{% endblock %}
 {% block content %}
@@ -21,6 +21,7 @@
     <div class="meta">
       <div><div class="k">Prepared for</div>{{ proposal.client|default:"—" }}{% if proposal.contact %}<br>{{ proposal.contact.name }}{% if proposal.contact.title %}, {{ proposal.contact.title }}{% endif %}{% endif %}</div>
       <div><div class="k">Date</div>{% now "j F Y" %}</div>
+      {% if proposal.project_number %}<div><div class="k">Project number</div>{{ proposal.project_number }}</div>{% endif %}
       {% if proposal.location %}<div><div class="k">Location</div>{{ proposal.location }}</div>{% endif %}
       {% if proposal.owner %}<div><div class="k">Prepared by</div>{{ proposal.owner.get_full_name|default:proposal.owner.username }}</div>{% endif %}
     </div>
@@ -40,15 +41,19 @@
     {% include "scheduling/_gantt.html" with gantt=gantt compact=True %}</section>
   {% endif %}
 
-  {% if proposal.staffing.exists or proposal.manual_value is not None %}
-  <section><h2><span class="n">{{ proposal.sections.count|add:3 }}.</span>Fee</h2>
-    {% if proposal.staffing.exists %}
-    <table class="tbl"><thead><tr><th>Role</th><th>Task</th><th class="num">Hours</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead><tbody>
-      {% for l in proposal.staffing.all %}<tr><td>{{ l.role }}</td><td>{{ l.task }}</td><td class="num">{{ l.hours|floatformat:0 }}</td><td class="num">${{ l.rate|floatformat:0 }}</td><td class="num">${{ l.amount|floatformat:0|intcomma }}</td></tr>{% endfor %}
-      <tr><td colspan="4"><strong>Labour</strong></td><td class="num">${{ proposal.labour_total|floatformat:0|intcomma }}</td></tr>
-      {% if proposal.expenses %}<tr><td colspan="4">Expenses{% if proposal.markup_percent %} (incl. {{ proposal.markup_percent|floatformat:0 }}% markup){% endif %}</td><td class="num">${{ proposal.expenses_total|floatformat:0|intcomma }}</td></tr>{% endif %}
-    </tbody><tfoot><tr><td colspan="4">Total fee</td><td class="num">${{ proposal.fee_total|floatformat:0|intcomma }}</td></tr></tfoot></table>
-    {% else %}<p>Total fee: <strong>${{ proposal.fee_total|floatformat:0|intcomma }}</strong></p>{% endif %}
+  {% if proposal.items.exists or proposal.manual_value is not None %}
+  <section><h2><span class="n">{{ proposal.sections.count|add:3 }}.</span>Fee <small class="muted">({{ proposal.cur.code }})</small></h2>
+    {% if proposal.items.exists %}
+    <table class="tbl"><thead><tr><th>Item / line</th><th>Who / description</th><th class="num">Hours / qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead><tbody>
+      {% for item in proposal.items.all %}
+      <tr style="background:#fafbfc"><td colspan="4"><strong>{{ item.code }} {{ item.name }}</strong></td><td class="num"><strong>{{ item.total|money:proposal.cur }}</strong></td></tr>
+      {% for l in item.lines.all %}<tr><td style="padding-left:1.8rem"><small>{{ l.get_kind_display }}</small></td><td>{% if l.kind == 'labour' %}{{ l.label }}{% else %}{{ l.description }}{% endif %}</td><td class="num">{% if l.kind == 'labour' %}{{ l.hours|num:0 }}{% else %}{{ l.quantity|num:2 }}{% endif %}</td><td class="num">{{ l.unit_cost|money2:proposal.cur }}</td><td class="num">{{ l.amount|money:proposal.cur }}</td></tr>{% endfor %}
+      {% endfor %}
+      <tr><td colspan="4"><strong>Labour</strong> <small class="muted">({{ proposal.total_hours|num:0 }} h)</small></td><td class="num">{{ proposal.labour_total|money:proposal.cur }}</td></tr>
+      <tr><td colspan="4">Expenses &amp; other</td><td class="num">{{ proposal.expense_total|money:proposal.cur }}</td></tr>
+      {% if proposal.contingency_percent %}<tr><td colspan="4">Contingency ({{ proposal.contingency_percent|num:1 }}%)</td><td class="num">{{ proposal.contingency_amount|money:proposal.cur }}</td></tr>{% endif %}
+    </tbody><tfoot><tr><td colspan="4">Total fee</td><td class="num">{{ proposal.fee_total|money:proposal.cur }}</td></tr></tfoot></table>
+    {% else %}<p>Total fee: <strong>{{ proposal.fee_total|money:proposal.cur }}</strong></p>{% endif %}
   </section>
   {% endif %}
 

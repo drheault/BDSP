@@ -1,0 +1,11 @@
+{% load bdsp %}
+{% if summary %}
+<div class="suggest">
+  <div class="row-flex"><strong>Suggestions from won projects</strong><span class="muted">{{ summary.n }} similar item{{ summary.n|pluralize }} · avg estimate {{ summary.avg_est_hours|num:0 }} h / {{ summary.avg_est_cost_base|money:base }}{% if summary.avg_act_hours %} · avg actual {{ summary.avg_act_hours|num:0 }} h{% endif %}{% if summary.avg_ratio %} · actual/estimate ×{{ summary.avg_ratio|floatformat:2 }}{% endif %}</span></div>
+  <div class="muted mt-sm">Recommended: <strong>{{ summary.recommended_hours|num:0 }} h</strong>{% if summary.avg_act_hours %} (based on booked time){% else %} (no actuals yet, based on estimates){% endif %}</div>
+  <table class="tbl mt-sm" style="font-size:.84rem"><thead><tr><th>Past item</th><th>Project</th><th class="num">Est. h</th><th class="num">Actual h</th><th class="num">Est. cost</th><th></th></tr></thead><tbody>
+  {% for m in matches %}<tr><td>{{ m.item.name }} <small class="muted">{{ m.score|floatformat:0 }}0% match</small></td><td><small>{{ m.item.proposal.number }} {{ m.item.proposal.title|truncatechars:30 }}</small></td><td class="num">{{ m.est_hours|num:0 }}</td><td class="num">{% if m.act_hours %}{{ m.act_hours|num:0 }}{% if m.hours_ratio %} <small class="{% if m.hours_ratio > 1.1 %}due-bad{% elif m.hours_ratio < 0.9 %}due-warn{% endif %}">×{{ m.hours_ratio|floatformat:2 }}</small>{% endif %}{% else %}—{% endif %}</td><td class="num">{{ m.est_cost_base|money:base }}</td>
+  <td class="row-actions"><form hx-post="{% url 'item_apply_suggestion' proposal.pk %}" hx-target="#fee-panel" hx-on::after-request="htmx.ajax('GET','{% url 'fee_summary' proposal.pk %}',{target:'#fee-summary'})"><input type="hidden" name="source" value="{{ m.item.pk }}"><input type="hidden" name="name" value="{{ q }}"><button class="btn btn-xs btn-accent" title="Create this item with the same lines, re-priced at current rates">Use as basis</button></form></td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% elif q|length > 2 %}<div class="muted">No similar items on won projects yet — suggestions improve as won work and timesheets accumulate.</div>{% endif %}

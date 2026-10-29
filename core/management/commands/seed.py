@@ -12,18 +12,47 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import CompanyProfile
+from core.models import CompanyProfile, Currency
 from crm.models import Client, Contact
 from projects.models import PastProject, ProjectImage
 from proposals.models import (
+    Employee,
+    FeeItem,
+    FeeLine,
     Proposal,
-    ProposalStaffing,
     ProposalTemplate,
     Service,
     StaffRole,
     TemplateSection,
 )
 from scheduling.gantt import create_default_tasks
+from timesheets.models import ActualEntry
+
+CURRENCIES = [
+    # code, name, symbol, rate to CAD (indicative — edit under Company settings)
+    ("CAD", "Canadian dollar", "CA$", "1"),
+    ("USD", "US dollar", "US$", "1.38"),
+    ("EUR", "Euro", "€", "1.50"),
+    ("GBP", "Pound sterling", "£", "1.75"),
+    ("CHF", "Swiss franc", "CHF ", "1.55"),
+    ("ILS", "Israeli new shekel", "₪", "0.37"),
+    ("AUD", "Australian dollar", "A$", "0.90"),
+]
+
+EMPLOYEES = [
+    # name, role, billing rate, cost rate (CAD/h)
+    ("Maria Rivera", "Principal", 295, 140),
+    ("James Chen", "Senior Associate", 245, 118),
+    ("Anneke Visser", "Senior Associate", 245, 115),
+    ("Tomás Herrera", "Associate", 210, 100),
+    ("Priya Desai", "Senior Engineer", 185, 88),
+    ("Lukas Brandt", "Senior Engineer", 185, 86),
+    ("Sofia Marchetti", "Project Engineer", 155, 74),
+    ("Daniel Okafor", "Engineer", 125, 60),
+    ("Hannah Lee", "Geologist", 150, 72),
+    ("Marc Dubois", "CAD / BIM Technician", 110, 52),
+    ("Elena Petrova", "Project Controls", 120, 58),
+]
 
 SERVICES = [
     # design
@@ -164,11 +193,21 @@ class Command(BaseCommand):
             User.objects.create_superuser("admin", "admin@example.com", "admin", first_name="Admin")
             self.stdout.write(self.style.WARNING("Created superuser admin / admin — change this password!"))
 
+        for i, (code, name, symbol, rate) in enumerate(CURRENCIES):
+            Currency.objects.get_or_create(code=code, defaults={"name": name, "symbol": symbol, "rate_to_base": rate, "sort_order": i})
+        if not company.default_currency_id:
+            company.default_currency = Currency.objects.get(code="CAD")
+            company.save()
+        self.stdout.write(f"Currencies: {Currency.objects.count()} (default {company.default_currency})")
+
         for i, (cat, name) in enumerate(SERVICES):
             Service.objects.get_or_create(name=name, defaults={"category": cat, "sort_order": i})
         for i, (title, rate) in enumerate(ROLES):
             StaffRole.objects.get_or_create(title=title, defaults={"default_rate": rate, "sort_order": i})
-        self.stdout.write(f"Services: {Service.objects.count()}, roles: {StaffRole.objects.count()}")
+        roles = {r.title: r for r in StaffRole.objects.all()}
+        for name, role, rate, cost in EMPLOYEES:
+            Employee.objects.get_or_create(name=name, defaults={"role": roles[role], "rate": rate, "cost_rate": cost})
+        self.stdout.write(f"Services: {Service.objects.count()}, roles: {StaffRole.objects.count()}, employees: {Employee.objects.count()}")
 
         for name, stype, desc, sections in (DESIGN_TEMPLATE, CONSTRUCTION_TEMPLATE, STUDY_TEMPLATE):
             t, created = ProposalTemplate.objects.get_or_create(
@@ -207,51 +246,95 @@ class Command(BaseCommand):
 
         design_t = ProposalTemplate.objects.get(name=DESIGN_TEMPLATE[0])
         cs_t = ProposalTemplate.objects.get(name=CONSTRUCTION_TEMPLATE[0])
-        roles = {r.title: r for r in StaffRole.objects.all()}
+        emps = {e.name.split()[0]: e for e in Employee.objects.all()}
+        cad = Currency.objects.get(code="CAD")
+        usd = Currency.objects.get(code="USD")
 
-        def staff(p, rows):
-            for i, (role, task, hours) in enumerate(rows):
-                ProposalStaffing.objects.create(proposal=p, role=roles[role], task=task, hours=hours, order=i)
+        def wbs(p, items):
+            """items: [(code, name, kind, [(employee_first_name | ('expense', kind, desc, qty, unit, markup)), hours), ...]), ...]"""
+            for i, (code, name, kind, lines) in enumerate(items):
+                item = FeeItem.objects.create(proposal=p, code=code, name=name, kind=kind, order=i)
+                for j, spec in enumerate(lines):
+                    if spec[0] == "expense":
+                        _, lk, desc, qty, unit, mk = spec
+                        FeeLine.objects.create(item=item, kind=lk, description=desc, quantity=qty, unit_cost=unit, markup_percent=mk, order=j)
+                    else:
+                        who, hours = spec
+                        FeeLine.objects.create(item=item, kind="labour", employee=emps[who], hours=hours, order=j)
 
         p1 = Proposal.objects.create(
             title="Eastside Extension – Twin-Bore Running Tunnels Final Design", client=transit, contact=c1,
             service_type="design", owner=lead1, status="drafting", due_date=today + timedelta(days=18),
-            probability=60, location="Downtown to Eastside, 4.2 km", expenses=48000, markup_percent=10,
+            probability=60, location="Downtown to Eastside, 4.2 km", currency=cad, contingency_percent=5,
             summary="Final design of 4.2 km twin-bore EPB TBM tunnels (6.5 m ID) with six cross-passages and two ventilation shafts in mixed-face glacial soils beneath an urban corridor.",
         )
         p1.apply_template(design_t)
         p1.services.set(Service.objects.filter(category="design")[:7])
-        staff(p1, [("Principal", "Project direction & QA", 240), ("Senior Associate", "Project management", 620), ("Senior Engineer", "Lining design", 980), ("Project Engineer", "Cross-passages & shafts", 1200), ("Engineer", "Analysis & drawings", 1600), ("Geologist", "GBR & ground characterisation", 480), ("CAD / BIM Technician", "Drawings", 1400), ("Project Controls", "Schedule & reporting", 200)])
+        wbs(p1, [
+            ("1", "Project management & QA", "pm", [("Maria", 160), ("James", 420), ("Elena", 200), ("expense", "travel", "Client meetings, 12 trips", 12, 650, 0)]),
+            ("2", "Geotechnical interpretation & GBR", "report", [("Hannah", 420), ("Lukas", 120), ("Daniel", 160)]),
+            ("3", "Segmental lining design", "task", [("Priya", 520), ("Daniel", 400), ("expense", "software", "FE analysis licence, 6 months", 6, 1800, 0)]),
+            ("4", "Cross-passage & shaft design", "task", [("Lukas", 460), ("Sofia", 600), ("Daniel", 300)]),
+            ("5", "Design drawings (IFC set, ~180 sheets)", "drawing", [("Marc", 1400), ("Sofia", 300)]),
+            ("6", "Design reports & calculations", "report", [("Priya", 240), ("Lukas", 200), ("James", 80)]),
+            ("7", "Settlement & third-party impact assessment", "calc", [("Tomás", 300), ("expense", "sub", "Building condition survey (subconsultant)", 1, 42000, 10)]),
+        ])
         create_default_tasks(p1, today + timedelta(days=45))
 
         p2 = Proposal.objects.create(
             title="Northern Interceptor Tunnel – Engineering Services During Construction", client=water, contact=c2,
             service_type="construction", owner=lead2, status="submitted", due_date=today - timedelta(days=12),
-            probability=70, location="North Basin", expenses=22000, markup_percent=5,
+            probability=70, location="North Basin", currency=cad,
             summary="Construction-phase engineering support for a 3.1 km, 3.6 m ID segmentally lined sewer tunnel driven by slurry TBM, including three drop shafts.",
         )
         p2.apply_template(cs_t)
         p2.services.set(Service.objects.filter(category="construction"))
-        staff(p2, [("Senior Associate", "Construction support lead", 420), ("Senior Engineer", "Submittal & RFI review", 900), ("Project Engineer", "Monitoring review", 700), ("Engineer", "Site inspection", 600), ("Geologist", "Ground condition assessment", 300)])
+        wbs(p2, [
+            ("1", "Construction support lead & reporting", "pm", [("James", 420)]),
+            ("2", "Submittal & shop drawing review", "site", [("Priya", 600), ("Daniel", 300)]),
+            ("3", "RFI responses", "site", [("Lukas", 400), ("Sofia", 300)]),
+            ("4", "Instrumentation & monitoring review", "site", [("Sofia", 400), ("Hannah", 120)]),
+            ("5", "Site inspections", "site", [("Daniel", 600), ("expense", "travel", "Site visits, 40 days", 40, 420, 0)]),
+            ("6", "Ground condition assessments", "report", [("Hannah", 300)]),
+        ])
         create_default_tasks(p2, today + timedelta(days=30))
 
         p3 = Proposal.objects.create(
             title="Harbour Crossing – Immersed vs. Bored Tunnel Options Study", client=transit, contact=c1,
             service_type="other", owner=lead1, status="lead", due_date=today + timedelta(days=40), probability=35,
-            location="Harbour crossing, 1.8 km", manual_value=185000,
+            location="Harbour crossing, 1.8 km", manual_value=185000, currency=cad,
             summary="Comparative study of immersed-tube and bored tunnel options for the harbour crossing, covering constructability, cost, schedule and risk.",
         )
         p3.apply_template(ProposalTemplate.objects.get(name=STUDY_TEMPLATE[0]))
 
         p4 = Proposal.objects.create(
             title="Central Station Cavern – Design-Build Design Services", client=jv, contact=c3,
-            service_type="both", owner=lead2, status="won", due_date=today - timedelta(days=90),
-            probability=100, location="Central Business District", expenses=95000, markup_percent=10,
+            service_type="both", owner=lead2, status="won", due_date=today - timedelta(days=90), project_number="25-118",
+            probability=100, location="Central Business District", currency=usd, contingency_percent=7.5,
             summary="Design of a 24 m span, 230 m long SEM mined station cavern with twin entrance shafts, for a design-build joint venture.",
         )
         p4.apply_template(design_t)
-        staff(p4, [("Principal", "Project direction", 400), ("Senior Associate", "Design manager", 900), ("Senior Engineer", "Cavern support design", 1800), ("Project Engineer", "Numerical modelling", 1500), ("Engineer", "Design & drawings", 2400), ("CAD / BIM Technician", "BIM", 2000)])
+        wbs(p4, [
+            ("1", "Project management & QA", "pm", [("Maria", 300), ("James", 700), ("Elena", 240)]),
+            ("2", "Geotechnical interpretation & GBR", "report", [("Hannah", 380), ("Lukas", 100)]),
+            ("3", "Cavern support & SEM sequence design", "task", [("Priya", 900), ("Lukas", 700), ("Daniel", 500), ("expense", "software", "3D FE licence, 12 months", 12, 1900, 0)]),
+            ("4", "Numerical modelling", "calc", [("Tomás", 800), ("Daniel", 500)]),
+            ("5", "Design drawings (IFC set)", "drawing", [("Marc", 2000), ("Sofia", 500)]),
+            ("6", "Design reports & calculations", "report", [("Priya", 300), ("James", 120)]),
+            ("7", "Settlement & third-party impact assessment", "calc", [("Tomás", 240), ("expense", "sub", "Building condition survey", 1, 38000, 10)]),
+        ])
         create_default_tasks(p4, today - timedelta(days=60))
+        # booked time on the won project: roughly 55% through, drawings running hot
+        import random
+
+        rnd = random.Random(7)
+        for item in p4.items.all():
+            factor = {"5": 0.75, "3": 0.6, "1": 0.5, "2": 0.95, "4": 0.55, "6": 0.3, "7": 0.5}.get(item.code, 0.5)
+            for line in item.lines.filter(kind="labour"):
+                booked = float(line.hours) * factor * rnd.uniform(0.85, 1.25)
+                weeks = 8
+                for w in range(weeks):
+                    ActualEntry.objects.create(proposal=p4, item=item, employee=line.employee, date=today - timedelta(days=7 * (weeks - w)), hours=round(booked / weeks * rnd.uniform(0.7, 1.3), 1), source="csv", description="Weekly timesheet")
         for t in p4.tasks.all():
             if t.end < today:
                 t.percent_complete = 100
@@ -261,12 +344,12 @@ class Command(BaseCommand):
 
         Proposal.objects.create(
             title="Westfield Stormwater Tunnel Preliminary Design", client=water, contact=c2, service_type="design",
-            owner=lead1, status="lost", due_date=today - timedelta(days=150), probability=0, manual_value=640000,
+            owner=lead1, status="lost", due_date=today - timedelta(days=150), probability=0, manual_value=640000, currency=cad,
             summary="Preliminary design of a 2.4 km stormwater storage tunnel.", notes="Lost on price; incumbent retained.",
         )
         Proposal.objects.create(
             title="Airport People-Mover Cut-and-Cover Peer Review", client=transit, service_type="other",
-            owner=lead2, status="won", due_date=today - timedelta(days=200), probability=100, manual_value=95000,
+            owner=lead2, status="won", due_date=today - timedelta(days=200), probability=100, manual_value=95000, currency=cad, project_number="25-071", project_status="complete",
         )
 
         projects = [

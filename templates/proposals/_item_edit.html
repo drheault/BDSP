@@ -1,0 +1,11 @@
+<div class="card item-card editing" id="item-{{ item.pk }}">
+  <form hx-post="{% url 'item_edit' item.pk %}" hx-target="#fee-panel" class="card-body inline-form">
+    <div class="field narrow" style="flex-basis:80px"><label>Code</label>{{ form.code }}</div>
+    <div class="field" style="flex:2"><label>Name</label>{{ form.name }}</div>
+    <div class="field"><label>Type</label>{{ form.kind }}</div>
+    <div class="field"><label>Schedule link</label>{{ form.task }}</div>
+    <div class="field" style="flex-basis:100%"><label>Notes</label>{{ form.notes }}</div>
+    <button class="btn btn-primary btn-sm">Save</button>
+    <button type="button" class="btn btn-ghost btn-sm" hx-get="{% url 'item_card' item.pk %}" hx-target="#item-{{ item.pk }}" hx-swap="outerHTML">Cancel</button>
+  </form>
+</div>

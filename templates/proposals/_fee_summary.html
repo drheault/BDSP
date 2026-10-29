@@ -1,11 +1,17 @@
-{% load humanize %}
+{% load bdsp %}
 <div class="card"><div class="card-body">
-  <h3>Fee summary</h3>
+  <h3>Fee summary <small class="muted">({{ proposal.cur.code }})</small></h3>
   <div class="kv">
-    <span class="k">Labour</span><span>${{ proposal.labour_total|floatformat:0|intcomma }} <small class="muted">({{ proposal.total_hours|floatformat:0 }} h)</small></span>
-    <span class="k">Expenses</span><span>${{ proposal.expenses_total|floatformat:0|intcomma }}{% if proposal.markup_percent %} <small class="muted">incl. {{ proposal.markup_percent|floatformat:0 }}% markup</small>{% endif %}</span>
-    <span class="k">Total fee</span><span style="font-size:1.3rem;font-weight:700">${{ proposal.fee_total|floatformat:0|intcomma }}</span>
-    {% if proposal.manual_value is not None %}<span class="k"></span><span class="muted">Manual override in effect</span>{% endif %}
-    <span class="k">Weighted</span><span>${{ proposal.weighted_value|floatformat:0|intcomma }} <small class="muted">at {{ proposal.probability }}%</small></span>
+    <span class="k">Labour</span><span>{{ proposal.labour_total|money:proposal.cur }} <small class="muted">({{ proposal.total_hours|num:0 }} h)</small></span>
+    <span class="k">Expenses &amp; other</span><span>{{ proposal.expense_total|money:proposal.cur }}</span>
+    {% if proposal.contingency_percent %}<span class="k">Contingency</span><span>{{ proposal.contingency_amount|money:proposal.cur }} <small class="muted">{{ proposal.contingency_percent|num:1 }}%</small></span>{% endif %}
+    <span class="k">Total fee</span><span style="font-size:1.3rem;font-weight:700">{{ proposal.fee_total|money:proposal.cur }}</span>
+    {% if proposal.manual_value is not None %}<span class="k"></span><span class="muted">Manual override in effect (computed {{ proposal.computed_total|money:proposal.cur }})</span>{% endif %}
+    {% if proposal.cur != company.base_currency %}<span class="k">In {{ company.base_currency.code }}</span><span>{{ proposal.fee_total_base|money:company.base_currency }}</span>{% endif %}
+    <span class="k">Weighted</span><span>{{ proposal.weighted_value|money:proposal.cur }} <small class="muted">at {{ proposal.probability }}%</small></span>
   </div>
+  {% if by_kind %}<h4 class="mt">By cost type</h4>
+  <table class="tbl" style="font-size:.84rem"><tbody>{% for r in by_kind %}<tr><td>{{ r.label }}</td><td class="num">{% if r.hours %}{{ r.hours|num:0 }} h{% endif %}</td><td class="num">{{ r.amount|money:proposal.cur }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+  {% if by_person %}<h4 class="mt">By person / role</h4>
+  <table class="tbl" style="font-size:.84rem"><tbody>{% for r in by_person %}<tr><td>{{ r.label }}</td><td class="num">{{ r.hours|num:0 }} h</td><td class="num">{{ r.amount|money:proposal.cur }}</td></tr>{% endfor %}</tbody></table>{% endif %}
 </div></div>

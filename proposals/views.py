@@ -9,25 +9,30 @@ from django.views.decorators.http import require_POST
 from crm.models import Contact
 
 from .forms import (
+    EmployeeForm,
+    FeeItemForm,
+    FeeLineForm,
     FeeSettingsForm,
     ProposalCreateForm,
     ProposalForm,
     ProposalSectionForm,
     ServiceForm,
-    StaffingForm,
     StaffRoleForm,
     TemplateForm,
     TemplateSectionForm,
 )
 from .models import (
+    Employee,
+    FeeItem,
+    FeeLine,
     Proposal,
     ProposalSection,
-    ProposalStaffing,
     ProposalTemplate,
     Service,
     StaffRole,
     TemplateSection,
 )
+from .suggestions import suggest_for_item
 from .utils import move_item
 
 User = get_user_model()
@@ -91,8 +96,6 @@ def proposal_create(request):
         template = form.cleaned_data.get("template")
         if template:
             proposal.apply_template(template)
-            for s in template.sections.none():  # placeholder for future scope copy
-                pass
         messages.success(request, f"Proposal {proposal.number} created.")
         return redirect("proposal_detail", pk=proposal.pk)
     return render(request, "proposals/proposal_create.html", {"form": form})
@@ -167,19 +170,30 @@ def proposal_duplicate(request, pk):
         location=src.location,
         summary=src.summary,
         probability=src.probability,
-        expenses=src.expenses,
-        markup_percent=src.markup_percent,
+        currency=src.currency,
+        contingency_percent=src.contingency_percent,
     )
     new.services.set(src.services.all())
     for s in src.sections.all():
         ProposalSection.objects.create(proposal=new, order=s.order, title=s.title, body=s.body)
-    for s in src.staffing.all():
-        ProposalStaffing.objects.create(proposal=new, role=s.role, task=s.task, hours=s.hours, rate=s.rate, order=s.order)
+    task_map = {}
     for t in src.tasks.all():
+        old = t.pk
         t.pk = None
         t.proposal = new
         t.predecessor = None
         t.save()
+        task_map[old] = t
+    for it in src.items.prefetch_related("lines"):
+        lines = list(it.lines.all())
+        it.pk = None
+        it.proposal = new
+        it.task = task_map.get(it.task_id)
+        it.save()
+        for l in lines:
+            l.pk = None
+            l.item = it
+            l.save()
     messages.success(request, f"Duplicated as {new.number}.")
     return redirect("proposal_detail", pk=new.pk)
 
@@ -256,8 +270,19 @@ def apply_template(request, pk):
 
 
 # =============================================================================
-# Fee estimate (htmx)
+# Fee estimate: work items × granular lines (htmx)
 # =============================================================================
+def _fee_ctx(proposal, item_form=None):
+    return {
+        "proposal": proposal,
+        "items": proposal.items.select_related("task").prefetch_related("lines__employee", "lines__role"),
+        "item_form": item_form or FeeItemForm(proposal=proposal),
+        "line_form": FeeLineForm(),
+        "by_kind": proposal.rollup_by_kind(),
+        "by_person": proposal.rollup_by_person(),
+    }
+
+
 @login_required
 def proposal_fee(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -265,56 +290,195 @@ def proposal_fee(request, pk):
         fee_form = FeeSettingsForm(request.POST, instance=proposal)
         if fee_form.is_valid():
             fee_form.save()
-            if request.htmx:
-                return render(request, "proposals/_fee_summary.html", {"proposal": proposal})
+            messages.success(request, "Fee settings saved.")
             return redirect("proposal_fee", pk=pk)
     else:
         fee_form = FeeSettingsForm(instance=proposal)
     ctx = _proposal_ctx(proposal, "fee")
-    ctx.update({"fee_form": fee_form, "staffing_form": StaffingForm(), "roles": StaffRole.objects.filter(is_active=True)})
+    ctx.update(_fee_ctx(proposal))
+    ctx["fee_form"] = fee_form
+    ctx["employees"] = Employee.objects.filter(is_active=True)
     return render(request, "proposals/proposal_fee.html", ctx)
 
 
+def _fee_panel(request, proposal, item_form=None, status=200):
+    return render(request, "proposals/_fee_panel.html", _fee_ctx(proposal, item_form), status=status)
+
+
+@login_required
+def fee_summary(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    return render(request, "proposals/_fee_summary.html", _fee_ctx(proposal))
+
+
 @login_required
 @require_POST
-def staffing_add(request, pk):
+def item_add(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
-    form = StaffingForm(request.POST)
+    form = FeeItemForm(request.POST, proposal=proposal)
     if form.is_valid():
-        line = form.save(commit=False)
-        line.proposal = proposal
-        line.order = proposal.staffing.count()
-        line.save()
-        return render(request, "proposals/_staffing_table.html", {"proposal": proposal, "staffing_form": StaffingForm()})
-    return render(request, "proposals/_staffing_table.html", {"proposal": proposal, "staffing_form": form}, status=422)
+        item = form.save(commit=False)
+        item.proposal = proposal
+        item.order = proposal.items.count()
+        if not item.code:
+            item.code = str(item.order + 1)
+        item.save()
+        return _fee_panel(request, proposal)
+    return _fee_panel(request, proposal, form, 422)
 
 
 @login_required
-def staffing_edit(request, pk):
-    line = get_object_or_404(ProposalStaffing, pk=pk)
+def item_edit(request, pk):
+    item = get_object_or_404(FeeItem, pk=pk)
     if request.method == "POST":
-        form = StaffingForm(request.POST, instance=line)
+        form = FeeItemForm(request.POST, instance=item)
         if form.is_valid():
             form.save()
-            return render(request, "proposals/_staffing_table.html", {"proposal": line.proposal, "staffing_form": StaffingForm()})
+            return _fee_panel(request, item.proposal)
     else:
-        form = StaffingForm(instance=line)
-    return render(request, "proposals/_staffing_edit_row.html", {"line": line, "form": form})
+        form = FeeItemForm(instance=item)
+    return render(request, "proposals/_item_edit.html", {"item": item, "form": form})
 
 
 @login_required
-def staffing_row(request, pk):
-    line = get_object_or_404(ProposalStaffing, pk=pk)
-    return render(request, "proposals/_staffing_row.html", {"line": line})
+def item_card(request, pk):
+    item = get_object_or_404(FeeItem, pk=pk)
+    return render(request, "proposals/_item_card.html", {"item": item, "proposal": item.proposal, "line_form": FeeLineForm()})
 
 
 @login_required
 @require_POST
-def staffing_delete(request, pk):
-    line = get_object_or_404(ProposalStaffing, pk=pk)
-    proposal = line.proposal
+def item_delete(request, pk):
+    item = get_object_or_404(FeeItem, pk=pk)
+    proposal = item.proposal
+    item.delete()
+    return _fee_panel(request, proposal)
+
+
+@login_required
+@require_POST
+def item_move(request, pk, direction):
+    item = get_object_or_404(FeeItem, pk=pk)
+    move_item(item, direction, item.proposal.items.all())
+    return _fee_panel(request, item.proposal)
+
+
+@login_required
+@require_POST
+def item_duplicate(request, pk):
+    item = get_object_or_404(FeeItem, pk=pk)
+    lines = list(item.lines.all())
+    item.pk = None
+    item.name = f"{item.name} (copy)"
+    item.order = item.proposal.items.count()
+    item.save()
+    for l in lines:
+        l.pk = None
+        l.item = item
+        l.save()
+    return _fee_panel(request, item.proposal)
+
+
+@login_required
+@require_POST
+def line_add(request, pk):
+    item = get_object_or_404(FeeItem, pk=pk)
+    form = FeeLineForm(request.POST)
+    if form.is_valid():
+        line = form.save(commit=False)
+        line.item = item
+        line.order = item.lines.count()
+        line.save()
+        return _fee_panel(request, item.proposal)
+    return render(request, "proposals/_item_card.html", {"item": item, "proposal": item.proposal, "line_form": form}, status=422)
+
+
+@login_required
+def line_edit(request, pk):
+    line = get_object_or_404(FeeLine, pk=pk)
+    if request.method == "POST":
+        form = FeeLineForm(request.POST, instance=line)
+        if form.is_valid():
+            form.save()
+            return _fee_panel(request, line.item.proposal)
+    else:
+        form = FeeLineForm(instance=line)
+    return render(request, "proposals/_line_edit_row.html", {"line": line, "form": form})
+
+
+@login_required
+def line_row(request, pk):
+    line = get_object_or_404(FeeLine, pk=pk)
+    return render(request, "proposals/_line_row.html", {"line": line, "proposal": line.item.proposal})
+
+
+@login_required
+@require_POST
+def line_delete(request, pk):
+    line = get_object_or_404(FeeLine, pk=pk)
+    proposal = line.item.proposal
     line.delete()
-    return render(request, "proposals/_staffing_table.html", {"proposal": proposal, "staffing_form": StaffingForm()})
+    return _fee_panel(request, proposal)
+
+
+@login_required
+def rate_lookup(request):
+    """htmx: default rate (proposal currency) for an employee or role."""
+    proposal = get_object_or_404(Proposal, pk=request.GET.get("proposal"))
+    line = FeeLine(item=FeeItem(proposal=proposal))
+    emp, role = request.GET.get("employee"), request.GET.get("role")
+    if emp:
+        line.employee = Employee.objects.filter(pk=emp).first()
+    elif role:
+        line.role = StaffRole.objects.filter(pk=role).first()
+    return HttpResponse(f"{line.default_rate():.2f}")
+
+
+@login_required
+def fee_suggest(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    q = request.GET.get("name", "").strip()
+    kind = request.GET.get("kind") or None
+    data = suggest_for_item(q, exclude_proposal=proposal, kind=kind)
+    from core.models import CompanyProfile
+
+    return render(request, "proposals/_suggestions.html", {"proposal": proposal, "q": q, "base": CompanyProfile.get_solo().base_currency, **data})
+
+
+@login_required
+@require_POST
+def item_apply_suggestion(request, pk):
+    """Create a fee item from a past item: copies its labour lines scaled to the suggested hours."""
+    proposal = get_object_or_404(Proposal, pk=pk)
+    src = get_object_or_404(FeeItem, pk=request.POST.get("source"))
+    item = FeeItem.objects.create(proposal=proposal, name=request.POST.get("name") or src.name, kind=src.kind, order=proposal.items.count(), code=str(proposal.items.count() + 1))
+    for l in src.lines.all():
+        l.pk = None
+        l.item = item
+        if l.kind == FeeLine.Kind.LABOUR:
+            l.unit_cost = 0  # re-price at today's rate for this proposal's currency
+        else:
+            l.unit_cost = proposal.cur.from_base(src.proposal.cur.to_base(l.unit_cost))
+        l.save()
+    return _fee_panel(request, proposal)
+
+
+# =============================================================================
+# Export
+# =============================================================================
+@login_required
+def proposal_export(request, pk, fmt):
+    from .export import build_docx, build_pdf
+
+    proposal = get_object_or_404(Proposal, pk=pk)
+    filename = f"{proposal.number}-{proposal.title[:40].replace(' ', '_')}"
+    if fmt == "docx":
+        data, ctype, ext = build_docx(proposal), "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"
+    else:
+        data, ctype, ext = build_pdf(proposal), "application/pdf", "pdf"
+    resp = HttpResponse(data, content_type=ctype)
+    resp["Content-Disposition"] = f'attachment; filename="{filename}.{ext}"'
+    return resp
 
 
 # =============================================================================
@@ -437,8 +601,10 @@ def library(request):
         {
             "services": Service.objects.all(),
             "roles": StaffRole.objects.all(),
+            "employees": Employee.objects.select_related("role"),
             "service_form": ServiceForm(),
             "role_form": StaffRoleForm(),
+            "employee_form": EmployeeForm(),
         },
     )
 
@@ -512,9 +678,48 @@ def role_edit(request, pk):
 @require_POST
 def role_delete(request, pk):
     role = get_object_or_404(StaffRole, pk=pk)
-    if role.proposalstaffing_set.exists():
+    if role.fee_lines.exists() or role.employees.exists():
         role.is_active = False
         role.save()
     else:
         role.delete()
     return _role_list(request)
+
+
+def _employee_list(request, form=None, status=200):
+    return render(request, "proposals/_employee_list.html", {"employees": Employee.objects.select_related("role"), "employee_form": form or EmployeeForm()}, status=status)
+
+
+@login_required
+@require_POST
+def employee_add(request):
+    form = EmployeeForm(request.POST)
+    if form.is_valid():
+        form.save()
+        return _employee_list(request)
+    return _employee_list(request, form, 422)
+
+
+@login_required
+def employee_edit(request, pk):
+    emp = get_object_or_404(Employee, pk=pk)
+    if request.method == "POST":
+        form = EmployeeForm(request.POST, instance=emp)
+        if form.is_valid():
+            form.save()
+            return _employee_list(request)
+    else:
+        form = EmployeeForm(instance=emp)
+    return render(request, "proposals/_employee_edit.html", {"employee": emp, "form": form})
+
+
+@login_required
+@require_POST
+def employee_delete(request, pk):
+    emp = get_object_or_404(Employee, pk=pk)
+    if emp.fee_lines.exists() or emp.actuals.exists():
+        emp.is_active = False
+        emp.save()
+    else:
+        emp.delete()
+    return _employee_list(request)

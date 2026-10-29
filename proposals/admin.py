@@ -1,13 +1,7 @@
 from django.contrib import admin
 
 from .models import (
-    Proposal,
-    ProposalSection,
-    ProposalStaffing,
-    ProposalTemplate,
-    Service,
-    StaffRole,
-    TemplateSection,
+    Employee, FeeItem, FeeLine, Proposal, ProposalSection, ProposalTemplate, Service, StaffRole, TemplateSection,
 )
 
 
@@ -27,17 +21,28 @@ class ProposalSectionInline(admin.StackedInline):
     extra = 0
 
 
-class ProposalStaffingInline(admin.TabularInline):
-    model = ProposalStaffing
+class FeeItemInline(admin.TabularInline):
+    model = FeeItem
     extra = 0
 
 
 @admin.register(Proposal)
 class ProposalAdmin(admin.ModelAdmin):
-    list_display = ("number", "title", "client", "status", "service_type", "owner", "due_date")
-    list_filter = ("status", "service_type", "owner")
-    search_fields = ("number", "title", "client__name")
-    inlines = [ProposalSectionInline, ProposalStaffingInline]
+    list_display = ("number", "project_number", "title", "client", "status", "service_type", "currency", "owner", "due_date")
+    list_filter = ("status", "service_type", "owner", "currency")
+    search_fields = ("number", "project_number", "title", "client__name")
+    inlines = [ProposalSectionInline, FeeItemInline]
+
+
+class FeeLineInline(admin.TabularInline):
+    model = FeeLine
+    extra = 0
+
+
+@admin.register(FeeItem)
+class FeeItemAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "proposal", "kind", "total")
+    inlines = [FeeLineInline]
 
 
 @admin.register(Service)
@@ -50,3 +55,10 @@ class ServiceAdmin(admin.ModelAdmin):
 class StaffRoleAdmin(admin.ModelAdmin):
     list_display = ("title", "default_rate", "is_active", "sort_order")
     list_editable = ("default_rate", "is_active", "sort_order")
+
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ("name", "initials", "role", "rate", "cost_rate", "is_active", "external_id")
+    list_filter = ("role", "is_active")
+    search_fields = ("name", "email", "external_id")

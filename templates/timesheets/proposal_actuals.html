@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% load bdsp %}
+{% block title %}{{ proposal.number }} actuals{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+{% if proposal.status != "won" %}<div class="callout warn mb">This proposal is not marked won yet. Actuals are normally booked once the project is live.</div>{% endif %}
+<div class="grid grid-4 mb">
+  <div class="card stat"><div class="k">Estimated hours</div><div class="v">{{ proposal.total_hours|num:0 }}</div><div class="d">from the fee build-up</div></div>
+  <div class="card stat"><div class="k">Booked hours</div><div class="v">{{ proposal.actual_hours|num:0 }}</div><div class="d">{% if proposal.hours_variance_pct is not None %}<span class="var-{{ proposal.hours_variance_pct|pct_class }}">{{ proposal.hours_variance_pct }}%</span> vs estimate{% else %}no estimate to compare{% endif %}</div></div>
+  <div class="card stat"><div class="k">Estimated cost</div><div class="v">{{ proposal.computed_total|money:proposal.cur }}</div><div class="d">labour + expenses + contingency</div></div>
+  <div class="card stat"><div class="k">Actual cost</div><div class="v">{{ proposal.actual_cost|money:proposal.cur }}</div><div class="d">{% if proposal.cost_variance_pct is not None %}<span class="var-{{ proposal.cost_variance_pct|pct_class }}">{{ proposal.cost_variance_pct }}%</span> vs estimate{% else %}hours × employee rate{% endif %}</div></div>
+</div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-head"><h3>Estimate vs actual by work item</h3></div>
+      <table class="tbl"><thead><tr><th>Item</th><th class="num">Est. h</th><th class="num">Actual h</th><th style="min-width:120px">Burn</th><th class="num">Est. cost</th><th class="num">Actual cost</th></tr></thead><tbody>
+      {% for r in items %}<tr><td>{% if r.item %}<span class="mono muted">{{ r.item.code }}</span> {{ r.item.name }}{% else %}<em class="muted">Not mapped to an item</em>{% endif %}</td><td class="num">{{ r.est_hours|num:0 }}</td><td class="num">{{ r.act_hours|num:0 }}</td>
+      <td>{% if r.pct is not None %}<div class="progress" title="{{ r.pct|floatformat:0 }}%"><i style="width:{% if r.pct > 100 %}100{% else %}{{ r.pct|floatformat:0 }}{% endif %}%;{% if r.pct > 110 %}background:var(--bad){% elif r.pct > 90 %}background:var(--warn){% endif %}"></i></div><small class="muted">{{ r.pct|floatformat:0 }}%</small>{% else %}—{% endif %}</td>
+      <td class="num">{{ r.est_cost|money:proposal.cur }}</td><td class="num">{{ r.act_cost|money:proposal.cur }}</td></tr>
+      {% empty %}<tr><td colspan="6" class="muted">No work items in the fee build-up yet.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card"><div class="card-head"><h3>Time entries</h3><span class="muted">{% if entries_total > entries|length %}latest {{ entries|length }} of {{ entries_total }} — see all in <a href="{% url 'admin:timesheets_actualentry_changelist' %}?proposal__id__exact={{ proposal.pk }}">admin</a>{% else %}{{ entries_total }} entr{{ entries_total|pluralize:"y,ies" }}{% endif %}</span></div>
+      <table class="tbl"><thead><tr><th>Date</th><th>Person</th><th>Item</th><th class="num">Hours</th><th class="num">Cost ({{ company.base_currency.code }})</th><th>Source</th><th></th></tr></thead><tbody>
+      {% for e in entries %}<tr><td>{{ e.date|date:"j M Y" }}</td><td>{{ e.employee|default:e.employee_name }}</td><td><small>{{ e.item|default:"—" }}</small>{% if e.description %}<br><small class="muted">{{ e.description }}</small>{% endif %}</td><td class="num">{{ e.hours|num:2 }}</td><td class="num">{{ e.cost|money:company.base_currency }}</td><td><small>{{ e.get_source_display }}</small></td>
+      <td class="row-actions"><form method="post" action="{% url 'actual_delete' e.pk %}" data-confirm="Delete this entry?">{% csrf_token %}<button class="btn btn-xs btn-danger">×</button></form></td></tr>
+      {% empty %}<tr><td colspan="7" class="muted">No time booked yet. Add entries manually or import a timesheet CSV.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-head"><h3>By person</h3></div>
+      <table class="tbl"><thead><tr><th>Person</th><th class="num">Est. h</th><th class="num">Actual h</th></tr></thead><tbody>{% for p in people %}<tr><td>{{ p.label }}</td><td class="num">{{ p.est|num:0 }}</td><td class="num">{{ p.act|num:0 }}</td></tr>{% empty %}<tr><td colspan="3" class="muted">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card"><div class="card-body"><h3>Add time entry</h3>
+      <form method="post" action="{% url 'actual_add' proposal.pk %}" class="stack">{% csrf_token %}
+        {% include "includes/field.html" with field=entry_form.date %}{% include "includes/field.html" with field=entry_form.employee %}{% include "includes/field.html" with field=entry_form.item %}
+        <div class="row-flex">{% include "includes/field.html" with field=entry_form.hours %}{% include "includes/field.html" with field=entry_form.cost %}</div>
+        {% include "includes/field.html" with field=entry_form.description %}
+        <button class="btn btn-primary">Add entry</button></form></div></div>
+    <div class="card"><div class="card-body"><h3>Import timesheet CSV</h3>
+      <p class="muted">Columns: date, employee, hours; optional project_number, task, cost, description, id. Rows match this proposal unless they carry another project number. Office Timesheets exports use the same importer.</p>
+      <form method="post" action="{% url 'actual_import' proposal.pk %}" enctype="multipart/form-data" class="stack">{% csrf_token %}
+        {% include "includes/field.html" with field=import_form.file %}{% include "includes/field.html" with field=import_form.source %}
+        <button class="btn">Import</button></form></div></div>
+  </div>
+</div>
+{% endblock %}

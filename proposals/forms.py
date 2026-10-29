@@ -1,16 +1,11 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
+from core.models import Currency
 from crm.models import Contact
 
 from .models import (
-    Proposal,
-    ProposalSection,
-    ProposalStaffing,
-    ProposalTemplate,
-    Service,
-    StaffRole,
-    TemplateSection,
+    Employee, FeeItem, FeeLine, Proposal, ProposalSection, ProposalTemplate, Service, StaffRole, TemplateSection,
 )
 
 User = get_user_model()
@@ -24,14 +19,12 @@ class ProposalForm(forms.ModelForm):
     class Meta:
         model = Proposal
         fields = [
-            "title", "client", "contact", "service_type", "owner", "status", "due_date",
-            "probability", "location", "summary", "services", "notes",
+            "title", "project_number", "client", "contact", "service_type", "owner", "status", "project_status", "due_date",
+            "probability", "currency", "location", "summary", "services", "notes",
             "manual_value", "submitted_at", "decided_at",
         ]
         widgets = {
-            "due_date": DateInput(),
-            "submitted_at": DateInput(),
-            "decided_at": DateInput(),
+            "due_date": DateInput(), "submitted_at": DateInput(), "decided_at": DateInput(),
             "summary": forms.Textarea(attrs={"rows": 4}),
             "notes": forms.Textarea(attrs={"rows": 3}),
             "services": forms.CheckboxSelectMultiple(),
@@ -44,26 +37,32 @@ class ProposalForm(forms.ModelForm):
         self.fields["owner"].label_from_instance = lambda u: u.get_full_name() or u.username
         if "services" in self.fields:
             self.fields["services"].queryset = Service.objects.filter(is_active=True)
+        if "currency" in self.fields:
+            self.fields["currency"].queryset = Currency.objects.filter(is_active=True)
+            self.fields["currency"].required = False
+        if "project_number" in self.fields:
+            from core.models import CompanyProfile
+
+            c = CompanyProfile.get_solo()
+            self.fields["project_number"].widget.attrs["placeholder"] = c.project_number_example
+            self.fields["project_number"].help_text = c.project_number_help or self.fields["project_number"].help_text
         client_id = None
         if self.data.get("client"):
             client_id = self.data.get("client")
         elif self.instance.pk and self.instance.client_id:
             client_id = self.instance.client_id
-        self.fields["contact"].queryset = (
-            Contact.objects.filter(client_id=client_id) if client_id else Contact.objects.none()
-        )
+        self.fields["contact"].queryset = Contact.objects.filter(client_id=client_id) if client_id else Contact.objects.none()
         self.fields["contact"].required = False
 
 
 class ProposalCreateForm(ProposalForm):
     template = forms.ModelChoiceField(
-        queryset=ProposalTemplate.objects.all(),
-        required=False,
+        queryset=ProposalTemplate.objects.all(), required=False,
         help_text="Sections from the template are copied into the new proposal.",
     )
 
     class Meta(ProposalForm.Meta):
-        fields = ["title", "client", "contact", "service_type", "owner", "due_date", "location", "summary", "template"]
+        fields = ["title", "client", "contact", "service_type", "owner", "due_date", "currency", "location", "summary", "template"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,22 +78,64 @@ class ProposalSectionForm(forms.ModelForm):
         widgets = {"body": forms.Textarea(attrs={"rows": 8})}
 
 
-class StaffingForm(forms.ModelForm):
-    class Meta:
-        model = ProposalStaffing
-        fields = ["role", "task", "hours", "rate"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["role"].queryset = StaffRole.objects.filter(is_active=True)
-        self.fields["rate"].required = False
-        self.fields["rate"].help_text = "Leave blank to use the role's default rate."
-
-
 class FeeSettingsForm(forms.ModelForm):
     class Meta:
         model = Proposal
-        fields = ["expenses", "markup_percent", "manual_value"]
+        fields = ["currency", "contingency_percent", "manual_value"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["currency"].queryset = Currency.objects.filter(is_active=True)
+        self.fields["currency"].required = False
+
+
+class FeeItemForm(forms.ModelForm):
+    class Meta:
+        model = FeeItem
+        fields = ["code", "name", "kind", "task", "notes"]
+
+    def __init__(self, *args, proposal=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from scheduling.models import Task
+
+        proposal = proposal or (self.instance.proposal if self.instance.pk else None)
+        self.fields["task"].queryset = Task.objects.filter(proposal=proposal) if proposal else Task.objects.none()
+        self.fields["task"].required = False
+        self.fields["code"].widget.attrs["placeholder"] = "1.1"
+        self.fields["name"].widget.attrs["placeholder"] = "e.g. Lining design drawings"
+
+
+class FeeLineForm(forms.ModelForm):
+    class Meta:
+        model = FeeLine
+        fields = ["kind", "employee", "role", "description", "hours", "quantity", "unit_cost", "markup_percent"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["employee"].queryset = Employee.objects.filter(is_active=True).select_related("role")
+        self.fields["role"].queryset = StaffRole.objects.filter(is_active=True)
+        for f in ("employee", "role", "hours", "quantity", "unit_cost", "markup_percent", "description"):
+            self.fields[f].required = False
+        self.fields["unit_cost"].widget.attrs["placeholder"] = "auto"
+        self.fields["employee"].label_from_instance = lambda e: f"{e.name} ({e.role})"
+
+    def clean(self):
+        data = super().clean()
+        if data.get("kind") == FeeLine.Kind.LABOUR:
+            if not data.get("employee") and not data.get("role"):
+                self.add_error("employee", "Pick an employee or a role.")
+            if data.get("hours") is None:
+                data["hours"] = 0
+        else:
+            if data.get("quantity") is None:
+                data["quantity"] = 1
+            if not data.get("description"):
+                self.add_error("description", "Describe the expense.")
+        if data.get("unit_cost") is None:
+            data["unit_cost"] = 0
+        if data.get("markup_percent") is None:
+            data["markup_percent"] = 0
+        return data
 
 
 class TemplateForm(forms.ModelForm):
@@ -122,3 +163,14 @@ class StaffRoleForm(forms.ModelForm):
     class Meta:
         model = StaffRole
         fields = ["title", "default_rate", "is_active"]
+
+
+class EmployeeForm(forms.ModelForm):
+    class Meta:
+        model = Employee
+        fields = ["name", "initials", "role", "rate", "cost_rate", "email", "external_id", "is_active"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"].queryset = StaffRole.objects.filter(is_active=True)
+        self.fields["initials"].required = False

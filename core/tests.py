@@ -36,8 +36,23 @@ class SeedAndCoreTests(TestCase):
         r = self.client.post(
             reverse("company_settings"),
             {"name": "Deep Rock", "tagline": "", "primary_color": "#112233", "accent_color": "#445566",
-             "proposal_prefix": "DR", "proposal_footer": ""},
+             "proposal_prefix": "DR", "proposal_footer": "", "project_number_pattern": r"^\d{2}-\d{3}$",
+             "project_number_example": "26-001", "project_number_help": "", "require_project_number_when_won": "on"},
         )
         self.assertEqual(r.status_code, 302)
         self.assertEqual(CompanyProfile.get_solo().name, "Deep Rock")
         self.assertContains(self.client.get(reverse("dashboard")), "Deep Rock")
+
+
+    def test_currency_management(self):
+        user = get_user_model().objects.create_user("u2", password="p")
+        self.client.force_login(user)
+        r = self.client.post(reverse("currency_add"), {"code": "eur", "name": "Euro", "symbol": "€", "rate_to_base": "1.5", "is_active": "on"}, HTTP_HX_REQUEST="true")
+        self.assertContains(r, "EUR")
+        from core.models import Currency
+
+        eur = Currency.objects.get(code="EUR")
+        self.client.post(reverse("currency_make_default", args=[eur.pk]), HTTP_HX_REQUEST="true")
+        self.assertEqual(CompanyProfile.get_solo().default_currency, eur)
+        self.assertEqual(eur.format(1234.5), "€1,235")
+        self.assertEqual(eur.format(-20, 2), "-€20.00")

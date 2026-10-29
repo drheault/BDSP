@@ -1,0 +1,33 @@
+{% load bdsp %}
+<div class="card item-card" id="item-{{ item.pk }}">
+  <div class="card-head">
+    <div class="row-flex"><span class="mono muted">{{ item.code }}</span><h3 style="margin:0">{{ item.name }}</h3><span class="badge">{{ item.get_kind_display }}</span>{% if item.task %}<span class="badge badge-design" title="Linked schedule bar">⇄ {{ item.task.name|truncatechars:28 }}</span>{% endif %}</div>
+    <div class="row-flex">
+      <strong>{{ item.total|money:proposal.cur }}</strong>
+      <button class="btn btn-xs btn-ghost" hx-post="{% url 'item_move' item.pk 'up' %}" hx-target="#fee-panel">↑</button>
+      <button class="btn btn-xs btn-ghost" hx-post="{% url 'item_move' item.pk 'down' %}" hx-target="#fee-panel">↓</button>
+      <button class="btn btn-xs" hx-get="{% url 'item_edit' item.pk %}" hx-target="#item-{{ item.pk }}" hx-swap="outerHTML">Edit</button>
+      <button class="btn btn-xs" hx-post="{% url 'item_duplicate' item.pk %}" hx-target="#fee-panel">Duplicate</button>
+      <button class="btn btn-xs btn-danger" hx-post="{% url 'item_delete' item.pk %}" hx-confirm="Delete “{{ item.name }}” and its lines?" hx-target="#fee-panel" hx-on::after-request="htmx.ajax('GET','{% url 'fee_summary' proposal.pk %}',{target:'#fee-summary'})">×</button>
+    </div>
+  </div>
+  {% if item.notes %}<div class="card-body muted" style="padding:.4rem 1.25rem;border-bottom:1px solid var(--line)">{{ item.notes }}</div>{% endif %}
+  <table class="tbl"><thead><tr><th>Type</th><th>Who / description</th><th class="num">Hours / qty</th><th class="num">Rate / unit</th><th class="num">Markup</th><th class="num">Amount</th><th></th></tr></thead>
+  <tbody>{% for line in item.lines.all %}{% include "proposals/_line_row.html" %}{% empty %}<tr><td colspan="7" class="muted">No lines yet — add people and hours, or expenses, below.</td></tr>{% endfor %}</tbody>
+  {% if item.lines.exists %}<tfoot><tr><td colspan="2">Item total</td><td class="num">{{ item.hours|num:1 }} h</td><td></td><td></td><td class="num">{{ item.total|money:proposal.cur }}</td><td></td></tr></tfoot>{% endif %}
+  </table>
+  <div class="card-body" style="border-top:1px solid var(--line);background:#fafbfc">
+    <form hx-post="{% url 'line_add' item.pk %}" hx-target="#fee-panel" class="inline-form line-form" hx-on::after-request="if(event.detail.successful){htmx.ajax('GET','{% url 'fee_summary' proposal.pk %}',{target:'#fee-summary'})}">
+      <div class="field narrow" style="flex-basis:130px"><label>Type</label><select name="kind" onchange="toggleLineKind(this)">{% for k, v in line_form.fields.kind.choices %}<option value="{{ k }}" {% if line_form.kind.value == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+      <div class="field lk-labour"><label>Employee</label><select name="employee" hx-get="{% url 'rate_lookup' %}?proposal={{ proposal.pk }}" hx-trigger="change" hx-target="next .rate-target" hx-include="this" hx-swap="innerHTML"><option value="">— by role —</option>{% for e in line_form.fields.employee.queryset %}<option value="{{ e.pk }}">{{ e.name }} ({{ e.role }})</option>{% endfor %}</select><span class="rate-target" hidden></span></div>
+      <div class="field narrow lk-labour"><label>Role</label><select name="role" hx-get="{% url 'rate_lookup' %}?proposal={{ proposal.pk }}" hx-trigger="change" hx-target="next .rate-target" hx-include="this" hx-swap="innerHTML"><option value="">—</option>{% for r in line_form.fields.role.queryset %}<option value="{{ r.pk }}">{{ r.title }}</option>{% endfor %}</select><span class="rate-target" hidden></span></div>
+      <div class="field lk-expense" hidden style="flex:2"><label>Description</label><input type="text" name="description" placeholder="e.g. Plaxis licence, 3 months"></div>
+      <div class="field narrow lk-labour" style="flex-basis:90px"><label>Hours</label><input type="number" name="hours" step="0.5" min="0" placeholder="0"></div>
+      <div class="field narrow lk-expense" hidden style="flex-basis:80px"><label>Qty</label><input type="number" name="quantity" step="0.01" min="0" value="1"></div>
+      <div class="field narrow" style="flex-basis:120px"><label>Rate / unit ({{ proposal.cur.code }})</label><input type="number" name="unit_cost" step="0.01" min="0" placeholder="auto" class="rate-input"></div>
+      <div class="field narrow lk-expense" hidden style="flex-basis:80px"><label>Markup %</label><input type="number" name="markup_percent" step="0.5" min="0" value="0"></div>
+      <button class="btn btn-primary btn-sm">Add line</button>
+    </form>
+    {% if line_form.errors %}<div class="errorlist mt-sm">{% for f, errs in line_form.errors.items %}{{ f }}: {{ errs|join:", " }} {% endfor %}</div>{% endif %}
+  </div>
+</div>

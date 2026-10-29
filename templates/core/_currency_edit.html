@@ -1,0 +1,5 @@
+<tr id="currency-{{ currency.pk }}"><td colspan="5"><form hx-post="{% url 'currency_edit' currency.pk %}" hx-target="#currencies" class="inline-form">
+  <div class="field narrow" style="flex-basis:80px"><label>Code</label>{{ form.code }}</div><div class="field"><label>Name</label>{{ form.name }}</div>
+  <div class="field narrow" style="flex-basis:70px"><label>Symbol</label>{{ form.symbol }}</div><div class="field narrow"><label>Rate to base</label>{{ form.rate_to_base }}</div>
+  <div class="field check narrow">{{ form.is_active }}<label>Active</label></div>
+  <button class="btn btn-primary btn-sm">Save</button><button type="button" class="btn btn-ghost btn-sm" hx-get="{% url 'company_settings' %}" hx-select="#currencies > *" hx-target="#currencies">Cancel</button></form>{% if form.errors %}<div class="errorlist">{{ form.errors }}</div>{% endif %}</td></tr>

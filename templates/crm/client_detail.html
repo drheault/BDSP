@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% load humanize %}
+{% extends "base.html" %}{% load humanize %}{% load bdsp %}
 {% block title %}{{ client }}{% endblock %}
 {% block content %}
 <div class="page-head"><div><div class="crumbs"><a href="{% url 'client_list' %}">Clients</a> /</div><h1>{{ client.name }}</h1><div class="sub">{{ client.get_sector_display }}{% if client.website %} · <a href="{{ client.website }}" target="_blank" rel="noopener">{{ client.website|cut:"https://"|cut:"http://" }}</a>{% endif %}</div></div>
@@ -9,7 +9,7 @@
     <div class="card"><div class="card-head"><h3>Contacts</h3></div><div id="contacts">{% include "crm/_contact_list.html" %}</div></div>
     <div class="card"><div class="card-head"><h3>Proposals</h3></div>
       {% if proposals %}<table class="tbl"><thead><tr><th>No.</th><th>Title</th><th>Status</th><th class="num">Fee</th><th>Due</th></tr></thead><tbody>
-      {% for p in proposals %}<tr><td class="mono">{{ p.number }}</td><td><a class="strong" href="{% url 'proposal_detail' p.pk %}">{{ p.title }}</a></td><td>{% include "proposals/_status_badge.html" with proposal=p %}</td><td class="num">${{ p.fee_total|floatformat:0|intcomma }}</td><td>{{ p.due_date|date:"j M Y"|default:"—" }}</td></tr>{% endfor %}
+      {% for p in proposals %}<tr><td class="mono">{{ p.number }}</td><td><a class="strong" href="{% url 'proposal_detail' p.pk %}">{{ p.title }}</a></td><td>{% include "proposals/_status_badge.html" with proposal=p %}</td><td class="num">{{ p.fee_total|money:p.cur }}</td><td>{{ p.due_date|date:"j M Y"|default:"—" }}</td></tr>{% endfor %}
       </tbody></table>{% else %}<div class="empty">No proposals yet for this client.</div>{% endif %}</div>
   </div>
   <div class="card"><div class="card-body">

@@ -13,6 +13,7 @@ urlpatterns = [
     path("proposals/", include("proposals.urls")),
     path("schedule/", include("scheduling.urls")),
     path("projects/", include("projects.urls")),
+    path("actuals/", include("timesheets.urls")),
 ]
 
 if settings.DEBUG:
