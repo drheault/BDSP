@@ -1,8 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
+from core.formbuilder import ConfigurableFormMixin
 from core.models import Currency, Region
 from crm.models import Contact
+from tags.forms import TaggableFormMixin
 
 from .models import (
     Employee, FeeItem, FeeLine, Proposal, ProposalSection, ProposalTemplate, Service, StaffRole, TemplateSection,
@@ -15,17 +17,20 @@ class DateInput(forms.DateInput):
     input_type = "date"
 
 
-class ProposalForm(forms.ModelForm):
+class ProposalForm(TaggableFormMixin, ConfigurableFormMixin, forms.ModelForm):
+    form_key = "proposal"
+
     class Meta:
         model = Proposal
         fields = [
             "title", "region", "client", "contact", "service_type", "owner", "status", "project_status", "due_date",
-            "probability", "currency", "location", "summary", "services", "notes",
-            "manual_value", "submitted_at", "decided_at",
+            "probability", "currency", "location", "summary", "services", "closing_words", "signatory", "notes",
+            "manual_value", "submitted_at", "decided_at", "include_fee_breakdown", "include_schedule", "include_terms", "include_capabilities",
         ]
         widgets = {
             "due_date": DateInput(), "submitted_at": DateInput(), "decided_at": DateInput(),
             "summary": forms.Textarea(attrs={"rows": 4}),
+            "closing_words": forms.Textarea(attrs={"rows": 3}),
             "notes": forms.Textarea(attrs={"rows": 3}),
             "services": forms.CheckboxSelectMultiple(),
             "probability": forms.NumberInput(attrs={"min": 0, "max": 100, "step": 5}),
@@ -40,6 +45,9 @@ class ProposalForm(forms.ModelForm):
         if "currency" in self.fields:
             self.fields["currency"].queryset = Currency.objects.filter(is_active=True)
             self.fields["currency"].required = False
+        if "signatory" in self.fields:
+            self.fields["signatory"].queryset = Employee.objects.filter(is_active=True)
+            self.fields["signatory"].required = False
         if "region" in self.fields:
             self.fields["region"].queryset = Region.objects.filter(is_active=True)
             self.fields["region"].required = False
@@ -48,11 +56,13 @@ class ProposalForm(forms.ModelForm):
             client_id = self.data.get("client")
         elif self.instance.pk and self.instance.client_id:
             client_id = self.instance.client_id
-        self.fields["contact"].queryset = Contact.objects.filter(client_id=client_id) if client_id else Contact.objects.none()
-        self.fields["contact"].required = False
+        if "contact" in self.fields:
+            self.fields["contact"].queryset = Contact.objects.filter(client_id=client_id) if client_id else Contact.objects.none()
+            self.fields["contact"].required = False
 
 
 class ProposalCreateForm(ProposalForm):
+    form_key = "proposal_create"
     template = forms.ModelChoiceField(
         queryset=ProposalTemplate.objects.all(), required=False,
         help_text="Sections from the template are copied into the new proposal.",
@@ -88,7 +98,9 @@ class FeeSettingsForm(forms.ModelForm):
         self.fields["currency"].required = False
 
 
-class FeeItemForm(forms.ModelForm):
+class FeeItemForm(ConfigurableFormMixin, forms.ModelForm):
+    form_key = "fee_item"
+
     class Meta:
         model = FeeItem
         fields = ["code", "name", "kind", "task", "notes"]
@@ -164,7 +176,9 @@ class StaffRoleForm(forms.ModelForm):
         fields = ["title", "default_rate", "is_active"]
 
 
-class EmployeeForm(forms.ModelForm):
+class EmployeeForm(ConfigurableFormMixin, forms.ModelForm):
+    form_key = "employee"
+
     class Meta:
         model = Employee
         fields = ["name", "initials", "role", "rate", "cost_rate", "email", "external_id", "is_active"]
@@ -180,3 +194,9 @@ class ProjectRecordForm(forms.ModelForm):
         model = __import__("proposals.models", fromlist=["ProjectRecord"]).ProjectRecord
         fields = ["kind", "date", "title", "value", "unit", "path", "notes"]
         widgets = {"date": DateInput()}
+
+
+class AttachmentFileForm(forms.ModelForm):
+    class Meta:
+        model = __import__("proposals.models", fromlist=["ProposalAttachment"]).ProposalAttachment
+        fields = ["kind", "title", "file"]

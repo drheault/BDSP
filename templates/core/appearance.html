@@ -5,6 +5,7 @@
 <div class="actions"><details class="menu"><summary class="btn">Import theme {% include "includes/icons.html" with name="chev" %}</summary><div class="menu-items" style="min-width:280px;padding:.8rem"><form method="post" action="{% url 'theme_import' %}" enctype="multipart/form-data" class="stack">{% csrf_token %}{{ import_form.file }}<button class="btn btn-primary btn-sm">Import JSON</button></form></div></details>
 {% if active %}<form method="post" action="{% url 'theme_reset' %}">{% csrf_token %}<button class="btn btn-ghost">Use built-in default</button></form>{% endif %}</div></div>
 
+<div class="callout mb">Every style has a dark and a light palette. The theme sets the default; each user can switch in their account menu.</div>
 <h2>Built-in styles</h2>
 <div class="grid grid-4 mb">
 {% for key, p in presets.items %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% load tagchips %}
+{% block title %}{{ proposal.number }} attachments{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-head"><h3>Document structure</h3><span class="muted">main body, then attachments in this order</span></div>
+      <div class="card-body"><ol class="doc-outline">
+        <li><strong>Main body</strong> — cover, project description, scope &amp; approach (your sections), fee summary, closing words, signature{% if proposal.validity_line %}, validity note{% endif %}</li>
+        <li>Fee breakdown {% if proposal.include_fee_breakdown %}<span class="badge badge-won">included</span>{% else %}<span class="badge">off</span>{% endif %}</li>
+        <li>Schedule {% if proposal.include_schedule and proposal.tasks.exists %}<span class="badge badge-won">included</span>{% else %}<span class="badge">off</span>{% endif %}</li>
+        <li>Terms &amp; validity {% if proposal.include_terms %}<span class="badge badge-won">included</span>{% else %}<span class="badge">off</span>{% endif %}</li>
+        {% for a in attachments %}<li>{{ a.get_kind_display }}: <strong>{{ a.display_title }}</strong>{% if can.edit_proposals %} <form method="post" action="{% url 'attachment_move' a.pk 'up' %}" style="display:inline">{% csrf_token %}<button class="btn btn-xs btn-ghost" title="Move up">↑</button></form><form method="post" action="{% url 'attachment_move' a.pk 'down' %}" style="display:inline">{% csrf_token %}<button class="btn btn-xs btn-ghost" title="Move down">↓</button></form><form method="post" action="{% url 'attachment_remove' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn btn-xs btn-ghost" title="Remove">×</button></form>{% endif %}</li>{% endfor %}
+        <li>Capabilities &amp; services {% if proposal.include_capabilities %}<span class="badge badge-won">included</span>{% else %}<span class="badge">off</span>{% endif %}</li>
+      </ol><div class="muted">Switch the standard attachments on or off in the <a href="{% url 'proposal_detail' proposal.pk %}">Overview</a> form. Terms live in <a href="{% url 'company_settings' %}">Company settings</a>.</div></div></div>
+    <div class="card"><div class="card-head"><h3>Project sheets</h3><form method="get" style="margin:0"><input type="search" name="q" value="{{ q }}" placeholder="Filter sheets…" style="min-width:220px"></form></div>
+      <div class="table-wrap"><table class="tbl sheets"><thead><tr><th></th><th></th><th>Sheet</th><th>Relevance</th><th></th></tr></thead><tbody>
+      {% for s in suggestions %}{% include "proposals/_sheet_row.html" %}{% empty %}<tr><td colspan="5"><div class="empty"><strong>No published project sheets</strong>Create them under Project sheets.</div></td></tr>{% endfor %}
+      </tbody></table></div>
+      <div class="card-body muted" style="border-top:1px solid var(--line)">Sorted by relevance: shared tags (weighted by tag category), shared services, same client or sector, structure type and keywords from the title and summary. Tick to attach; attached sheets stay at the top.</div></div>
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-head"><h3>Preview</h3></div><div class="card-body" id="sheet-preview"><span class="muted">Choose “Preview” on a sheet to see it here.</span></div></div>
+    {% if can.edit_proposals %}
+    <div class="card"><div class="card-body"><h3>Attach a file</h3><p class="muted">Drawings, letters, certificates — PDFs are merged into the exported PDF; other files are listed.</p>
+      <form method="post" action="{% url 'attachment_add_file' proposal.pk %}" enctype="multipart/form-data" class="stack">{% csrf_token %}{% include "includes/field.html" with field=file_form.kind %}{% include "includes/field.html" with field=file_form.title %}{% include "includes/field.html" with field=file_form.file %}<button class="btn btn-primary btn-sm">Attach</button></form></div></div>
+    <div class="card"><div class="card-body"><h3>Attach a calculation</h3>
+      {% if calc_runs %}<form method="post" action="{% url 'attachment_add_calc' proposal.pk %}" class="stack">{% csrf_token %}<select name="run">{% for r in calc_runs %}<option value="{{ r.pk }}">{{ r.title }} ({{ r.tool.name }})</option>{% endfor %}</select><button class="btn btn-sm">Attach</button></form>{% else %}<p class="muted">Save a calculation against this proposal in <a href="{% url 'tool_list' %}">Calculations</a> and it appears here.</p>{% endif %}</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

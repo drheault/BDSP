@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ run.title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'tool_list' %}">Calculations</a> / <a href="{% url 'tool_detail' run.tool.key %}">{{ run.tool.name }}</a></div><h1>{{ run.title }}</h1><div class="sub">{{ run.user.get_full_name|default:run.user.username|default:"" }} · {{ run.created_at|date:"j M Y H:i" }}{% if run.proposal %} · <a href="{% url 'proposal_detail' run.proposal.pk %}">{{ run.proposal.number }} {{ run.proposal.title|truncatechars:40 }}</a>{% endif %}</div></div>
+<div class="actions">{% if run.user == request.user or request.user.is_superuser %}<form method="post" action="{% url 'run_delete' run.pk %}" data-confirm="Delete this saved calculation?">{% csrf_token %}<button class="btn btn-danger">Delete</button></form>{% endif %}</div></div>
+<div class="grid grid-2">
+  <div class="card"><div class="card-head"><h3>Inputs</h3></div><table class="tbl"><tbody>{% for k, v in run.inputs.items %}<tr><td>{{ k }}</td><td class="num">{{ v }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><div class="card-head"><h3>Results</h3>{% if run.outputs.headline %}<strong>{{ run.outputs.headline }}</strong>{% endif %}</div><table class="tbl"><tbody>{% for row in run.outputs.results %}<tr><td>{{ row.0 }}</td><td class="num"><strong>{{ row.1 }}</strong> <small class="muted">{{ row.2 }}</small></td></tr>{% endfor %}</tbody></table>
+    <div class="card-body stack" style="border-top:1px solid var(--line)">{% for row in run.outputs.checks %}<div class="check {% if row.1 %}ok{% else %}bad{% endif %}">{% if row.1 %}✔{% else %}✘{% endif %} {{ row.0 }}</div>{% endfor %}</div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,1 @@
+{% if tags %}<span class="chips">{% for t in tags %}<a class="chip {% if small %}chip-sm{% endif %}" href="{% url 'tag_detail' t.slug %}" style="--chip:{{ t.category.color }}" title="{{ t.category.name }}">{{ t.name }}</a>{% endfor %}</span>{% endif %}

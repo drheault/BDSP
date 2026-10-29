@@ -1,9 +1,9 @@
-{% extends "base.html" %}{% load humanize static %}
+{% extends "base.html" %}{% load humanize static tagchips social %}
 {% block title %}{{ project.name }}{% endblock %}
 {% block head %}<style>:root{--doc-primary:{{ company.primary_color }};--doc-accent:{{ company.accent_color }}}</style>{% endblock %}
 {% block content %}
 <div class="page-head no-print"><div><div class="crumbs"><a href="{% url 'project_list' %}">Project sheets</a> /</div><h1>{{ project.name }}</h1><div class="sub">{{ project.get_kind_display }}{% if project.location %} · {{ project.location }}{% endif %}</div></div>
-<div class="actions"><button class="btn" onclick="window.print()">{% include "includes/icons.html" with name="print" %} Print sheet</button>{% if can.manage_projects_library %}<a class="btn" href="{% url 'project_edit' project.pk %}">{% include "includes/icons.html" with name="edit" %} Edit</a>
+<div class="actions"><a class="btn btn-primary" href="{% url 'project_pdf' project.pk %}">{% include "includes/icons.html" with name="download" %} One-page PDF</a><button class="btn" onclick="window.print()">{% include "includes/icons.html" with name="print" %} Print</button>{% if can.manage_projects_library %}<a class="btn" href="{% url 'project_edit' project.pk %}">{% include "includes/icons.html" with name="edit" %} Edit</a>
 <details class="menu"><summary class="btn btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><form method="post" action="{% url 'project_delete' project.pk %}" data-confirm="Delete this project sheet and its images?">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete project sheet</button></form></div></details>{% endif %}</div></div>
 
 <article class="doc">
@@ -18,11 +18,20 @@
     {% if project.construction_value %}<div><div class="k">Construction value</div><div class="v">${{ project.construction_value|intcomma }}</div></div>{% endif %}
     {% if project.key_dimensions %}<div><div class="k">Key dimensions</div><div class="v">{{ project.key_dimensions }}</div></div>{% endif %}
   </div>
-  {% if project.description %}<h2>Overview</h2><div class="body">{{ project.description }}</div>{% endif %}
+  {% if project.description %}<h2>Project</h2><div class="body">{{ project.description }}</div>{% endif %}
+  <div class="sheet-cols">
+    {% if project.challenges %}<div><h2>Challenges</h2><div class="body">{{ project.challenges }}</div></div>{% endif %}
+    {% if project.contribution %}<div><h2>Our contribution</h2><div class="body">{{ project.contribution }}</div></div>{% endif %}
+    {% if project.value_added %}<div><h2>Value added</h2><div class="body">{{ project.value_added }}</div></div>{% endif %}
+  </div>
+  {% if project.services.exists %}<h2>Services provided</h2><ul class="svc">{% for s in project.services.all %}<li>{{ s.name }}</li>{% endfor %}</ul>{% endif %}
   {% if project.highlight_list %}<h2>Highlights</h2><ul>{% for h in project.highlight_list %}<li>{{ h }}</li>{% endfor %}</ul>{% endif %}
   {% if project.images.count > 1 %}<h2>Gallery</h2><div class="imgs">{% for img in project.images.all|slice:"1:" %}<figure style="margin:0"><img src="{{ img.image.url }}" alt="{{ img.caption }}" style="width:100%;border-radius:6px">{% if img.caption %}<figcaption class="muted">{{ img.caption }}</figcaption>{% endif %}</figure>{% endfor %}</div>{% endif %}
-  <footer class="footer"><span>{{ company.name }}</span><span>{{ project.name }}</span></footer>
+  {% if project.reference_contact %}<p class="muted">Reference: {{ project.reference_contact }}</p>{% endif %}
+  <footer class="footer"><span>{{ company.name }}</span><span>{% tag_chips project True %}</span></footer>
 </article>
+<div class="no-print mt">{% if project.source_path %}<div class="callout mb">Source material: <span class="mono">{{ project.source_path }}</span></div>{% endif %}{% if not project.is_published %}<div class="callout warn mb">Draft — not offered as a proposal attachment until published.</div>{% endif %}
+<div class="grid grid-2">{% comments_for project "Comments & review notes" %}<div class="card"><div class="card-head"><h3>Used in proposals</h3></div><table class="tbl"><tbody>{% for a in project.attached_to.all %}<tr><td><a href="{% url 'proposal_attachments' a.proposal.pk %}">{{ a.proposal.number }} {{ a.proposal.title|truncatechars:48 }}</a></td></tr>{% empty %}<tr><td class="muted">Not attached to any proposal yet.</td></tr>{% endfor %}</tbody></table></div></div></div>
 
 {% if can.manage_projects_library %}<div class="card mt no-print"><div class="card-head"><h3>Images</h3><span class="muted">First image is the cover.</span></div><div id="gallery">{% include "projects/_image_gallery.html" %}</div></div>{% endif %}
 {% endblock %}

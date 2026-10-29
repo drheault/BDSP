@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% load humanize %}{% load bdsp %}
+{% extends "base.html" %}{% load humanize tagchips social %}{% load bdsp %}
 {% block title %}{{ proposal.number }} {{ proposal.title }}{% endblock %}
 {% block content %}
 {% include "proposals/_proposal_header.html" %}
@@ -7,30 +7,36 @@
   <div class="card span-2"><div class="card-body">
     {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     <div class="form-grid">
-      {% include "includes/field.html" with field=form.title extra_class="full" %}
-      {% include "includes/field.html" with field=form.region %}
-      {% include "includes/field.html" with field=form.currency %}
-      <div class="field"><label for="{{ form.client.id_for_label }}">Client</label>
+      {% if form.title %}{% include "includes/field.html" with field=form.title extra_class="full" %}{% endif %}
+      {% if form.region %}{% include "includes/field.html" with field=form.region %}{% endif %}
+      {% if form.currency %}{% include "includes/field.html" with field=form.currency %}{% endif %}
+      {% if form.client %}<div class="field"><label for="{{ form.client.id_for_label }}">Client</label>
         <select name="client" id="{{ form.client.id_for_label }}" hx-get="{% url 'contact_options' %}" hx-target="#{{ form.contact.id_for_label }}" hx-trigger="change" hx-include="this">
           <option value="">— none —</option>{% for c in form.fields.client.queryset %}<option value="{{ c.pk }}" {% if form.client.value|stringformat:"s" == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
-        </select>{% for e in form.client.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>
-      {% include "includes/field.html" with field=form.contact %}
-      {% include "includes/field.html" with field=form.service_type %}
-      {% include "includes/field.html" with field=form.owner %}
-      {% include "includes/field.html" with field=form.status %}
-      {% include "includes/field.html" with field=form.project_status %}
-      {% include "includes/field.html" with field=form.due_date %}
-      {% include "includes/field.html" with field=form.probability %}
-      {% include "includes/field.html" with field=form.location %}
-      {% include "includes/field.html" with field=form.summary extra_class="full" %}
-      {% include "includes/field.html" with field=form.services extra_class="full" %}
-      {% include "includes/field.html" with field=form.notes extra_class="full" %}
+        </select>{% for e in form.client.errors %}<div class="err">{{ e }}</div>{% endfor %}</div>{% endif %}
+      {% if form.contact %}{% include "includes/field.html" with field=form.contact %}{% endif %}
+      {% if form.service_type %}{% include "includes/field.html" with field=form.service_type %}{% endif %}
+      {% if form.owner %}{% include "includes/field.html" with field=form.owner %}{% endif %}
+      {% if form.status %}{% include "includes/field.html" with field=form.status %}{% endif %}
+      {% if form.project_status %}{% include "includes/field.html" with field=form.project_status %}{% endif %}
+      {% if form.due_date %}{% include "includes/field.html" with field=form.due_date %}{% endif %}
+      {% if form.probability %}{% include "includes/field.html" with field=form.probability %}{% endif %}
+      {% if form.location %}{% include "includes/field.html" with field=form.location %}{% endif %}
+      {% if form.summary %}{% include "includes/field.html" with field=form.summary extra_class="full" %}{% endif %}
+      {% if form.services %}{% include "includes/field.html" with field=form.services extra_class="full" %}{% endif %}
+      {% if form.tags %}{% tag_datalist_tag %}{% include "includes/field.html" with field=form.tags extra_class="full" %}{% endif %}
+      {% if form.closing_words %}{% include "includes/field.html" with field=form.closing_words extra_class="full" %}{% endif %}
+      {% if form.signatory %}{% include "includes/field.html" with field=form.signatory %}{% endif %}
+      {% if form.notes %}{% include "includes/field.html" with field=form.notes extra_class="full" %}{% endif %}
+      {% for cf, val in form.custom_field_values %}{% with name="cf_"|add:cf.key %}{% for f in form %}{% if f.name == name %}{% include "includes/field.html" with field=f %}{% endif %}{% endfor %}{% endwith %}{% endfor %}
     </div>
+    <h4 class="mt">Standard attachments</h4>
+    <div class="row-flex">{% if form.include_fee_breakdown %}{% include "includes/field.html" with field=form.include_fee_breakdown %}{% endif %}{% if form.include_schedule %}{% include "includes/field.html" with field=form.include_schedule %}{% endif %}{% if form.include_terms %}{% include "includes/field.html" with field=form.include_terms %}{% endif %}{% if form.include_capabilities %}{% include "includes/field.html" with field=form.include_capabilities %}{% endif %}</div>
     <h4 class="mt">Tracking</h4>
     <div class="form-grid">
-      {% include "includes/field.html" with field=form.submitted_at %}
-      {% include "includes/field.html" with field=form.decided_at %}
-      {% include "includes/field.html" with field=form.manual_value %}
+      {% if form.submitted_at %}{% include "includes/field.html" with field=form.submitted_at %}{% endif %}
+      {% if form.decided_at %}{% include "includes/field.html" with field=form.decided_at %}{% endif %}
+      {% if form.manual_value %}{% include "includes/field.html" with field=form.manual_value %}{% endif %}
     </div>
     {% if can.edit_proposals %}<div class="form-actions"><button class="btn btn-primary">Save changes</button></div>{% endif %}
   </div></div>
@@ -73,4 +79,5 @@
   </div>
 </div>
 </form>
+<div class="mt">{% comments_for proposal "Comments & review notes" %}</div>
 {% endblock %}

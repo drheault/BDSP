@@ -12,8 +12,8 @@ from django.views.decorators.http import require_POST
 from proposals.models import Proposal
 from scheduling.models import Task
 
-from .forms import AccessRoleForm, CompanyProfileForm, CurrencyForm, RegionForm, ThemeForm, ThemeImportForm, UserForm
-from .models import CAPABILITIES, AccessRole, CompanyProfile, Currency, Region, Theme
+from .forms import AccessRoleForm, CompanyProfileForm, CurrencyForm, CustomFieldForm, FieldRuleForm, RegionForm, ThemeForm, ThemeImportForm, UserForm
+from .models import CAPABILITIES, FORM_KEYS, AccessRole, CompanyProfile, CustomField, Currency, FieldRule, Region, Theme
 from .themes import DEFAULT_PRESET, PRESETS
 from .permissions import require_cap
 
@@ -303,7 +303,7 @@ def theme_from_preset(request, key):
     while Theme.objects.filter(name=name).exists():
         name = f"{preset['name']} {i}"
         i += 1
-    theme = Theme.objects.create(name=name, description=preset["description"], based_on=key, variables=dict(preset["vars"]), is_active=request.POST.get("activate") == "1")
+    theme = Theme.objects.create(name=name, description=preset["description"], based_on=key, variables=dict(preset["vars"]), dark_variables=dict(preset.get("dark", {})), is_active=request.POST.get("activate") == "1")
     messages.success(request, f"Theme “{theme.name}” created{' and applied' if theme.is_active else ''}.")
     return redirect("theme_edit", pk=theme.pk) if request.POST.get("edit") else redirect("appearance")
 
@@ -377,10 +377,101 @@ def theme_import(request):
         data = json.loads(form.cleaned_data["file"].read().decode("utf-8-sig"))
         name = str(data.get("name") or "Imported theme")[:80]
         variables = {k: str(v)[:200] for k, v in (data.get("variables") or {}).items() if isinstance(k, str)}
+        dark = {k: str(v)[:200] for k, v in (data.get("dark_variables") or {}).items() if isinstance(k, str)}
         theme, created = Theme.objects.update_or_create(
-            name=name, defaults={"description": str(data.get("description") or "")[:200], "based_on": str(data.get("based_on") or "")[:30], "variables": variables, "custom_css": str(data.get("custom_css") or "")[:20000]}
+            name=name, defaults={"description": str(data.get("description") or "")[:200], "based_on": str(data.get("based_on") or "")[:30], "variables": variables, "dark_variables": dark, "default_mode": "light" if data.get("default_mode") == "light" else "dark", "custom_css": str(data.get("custom_css") or "")[:20000]}
         )
         messages.success(request, f"Theme “{theme.name}” {'imported' if created else 'updated'}.")
     except (ValueError, AttributeError) as e:
         messages.error(request, f"Could not read theme file: {e}")
     return redirect("appearance")
+
+
+# ---- form builder ---------------------------------------------------------------
+FORM_FIELDS = {
+    "proposal": ["title", "region", "client", "contact", "service_type", "owner", "status", "project_status", "due_date", "probability", "currency", "location", "summary", "services", "closing_words", "signatory", "tags", "notes", "manual_value", "submitted_at", "decided_at", "include_fee_breakdown", "include_schedule", "include_terms", "include_capabilities"],
+    "proposal_create": ["title", "region", "client", "contact", "service_type", "owner", "due_date", "currency", "location", "summary", "template", "tags", "assign_number"],
+    "client": ["name", "sector", "address", "website", "notes"],
+    "contact": ["name", "title", "email", "phone", "is_primary", "notes"],
+    "employee": ["name", "initials", "role", "rate", "cost_rate", "email", "external_id", "is_active"],
+    "project_sheet": ["name", "kind", "client", "client_name", "location", "role", "year_completed", "construction_value", "fee_value", "duration_months", "key_dimensions", "services", "description", "challenges", "contribution", "value_added", "highlights", "source_path", "reference_contact", "tags", "is_featured", "is_published"],
+    "task": ["name", "phase", "start", "end", "is_milestone", "percent_complete", "predecessor"],
+    "fee_item": ["code", "name", "kind", "task", "notes"],
+}
+
+
+@login_required
+@require_cap("manage_forms")
+def form_builder(request, form_key="proposal"):
+    if form_key not in dict(FORM_KEYS):
+        form_key = "proposal"
+    rules = {r.field_name: r for r in FieldRule.objects.filter(form_key=form_key)}
+    rows = []
+    for i, name in enumerate(FORM_FIELDS.get(form_key, [])):
+        r = rules.get(name)
+        rows.append({"name": name, "rule": r, "visible": r.visible if r else True, "required": (r.required if r and r.required is not None else None), "label": r.label if r else "", "help": r.help_text if r else "", "order": r.order if r else 100 + i})
+    rows.sort(key=lambda x: x["order"])
+    return render(request, "core/form_builder.html", {"form_keys": FORM_KEYS, "form_key": form_key, "rows": rows, "custom": CustomField.objects.filter(form_key=form_key), "cf_form": CustomFieldForm(initial={"form_key": form_key})})
+
+
+@login_required
+@require_cap("manage_forms")
+@require_POST
+def form_builder_save(request, form_key):
+    """Save the whole table of rules in one go."""
+    names = FORM_FIELDS.get(form_key, [])
+    for i, name in enumerate(names):
+        visible = request.POST.get(f"visible_{name}") == "on"
+        req = request.POST.get(f"required_{name}", "")
+        label = request.POST.get(f"label_{name}", "").strip()
+        help_text = request.POST.get(f"help_{name}", "").strip()
+        try:
+            order = int(request.POST.get(f"order_{name}", 100 + i))
+        except ValueError:
+            order = 100 + i
+        FieldRule.objects.update_or_create(form_key=form_key, field_name=name, defaults={"visible": visible, "required": None if req == "" else req == "true", "label": label, "help_text": help_text, "order": order})
+    messages.success(request, "Form layout saved. It applies the next time the form opens.")
+    return redirect("form_builder", form_key=form_key)
+
+
+@login_required
+@require_cap("manage_forms")
+@require_POST
+def custom_field_save(request):
+    pk = request.POST.get("pk")
+    inst = CustomField.objects.filter(pk=pk).first() if pk else None
+    form = CustomFieldForm(request.POST, instance=inst)
+    if form.is_valid():
+        cf = form.save()
+        messages.success(request, f"Custom field “{cf.label}” saved.")
+        return redirect("form_builder", form_key=cf.form_key)
+    messages.error(request, form.errors.as_text())
+    return redirect("form_builder", form_key=request.POST.get("form_key", "proposal"))
+
+
+@login_required
+@require_cap("manage_forms")
+@require_POST
+def custom_field_delete(request, pk):
+    cf = get_object_or_404(CustomField, pk=pk)
+    key = cf.form_key
+    cf.delete()
+    return redirect("form_builder", form_key=key)
+
+
+@login_required
+@require_cap("manage_forms")
+@require_POST
+def form_builder_reset(request, form_key):
+    FieldRule.objects.filter(form_key=form_key).delete()
+    messages.success(request, "Layout reset to defaults.")
+    return redirect("form_builder", form_key=form_key)
+
+
+# ---- landing / mode ---------------------------------------------------------------
+def landing(request):
+    if request.user.is_authenticated:
+        return dashboard(request)
+    from proposals.models import Service
+
+    return render(request, "core/landing.html", {"services": Service.objects.filter(is_active=True)[:9]})

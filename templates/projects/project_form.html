@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load tagchips %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="page-head"><div><div class="crumbs"><a href="{% url 'project_list' %}">Project sheets</a> /</div><h1>{{ title }}</h1></div></div>
 <div class="card" style="max-width:900px"><div class="card-body"><form method="post">{% csrf_token %}
-{% include "includes/form.html" with full_fields=",description,highlights," %}
+{% tag_datalist_tag %}{% include "includes/form.html" with full_fields=",description,challenges,contribution,value_added,highlights,services,tags,source_path," %}
 <div class="form-actions"><button class="btn btn-primary">Save project sheet</button><a class="btn btn-ghost" href="{% if project %}{% url 'project_detail' project.pk %}{% else %}{% url 'project_list' %}{% endif %}">Cancel</a></div>
 </form></div></div>
 {% endblock %}

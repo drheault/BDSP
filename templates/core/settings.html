@@ -28,6 +28,13 @@
       {% include "includes/field.html" with field=form.sequence_start %}
       {% include "includes/field.html" with field=form.require_project_number_when_won extra_class="full" %}
     </div>
+    <h3 class="mt">Proposal documents</h3>
+    <div class="form-grid">
+      {% include "includes/field.html" with field=form.proposal_terms extra_class="full" %}
+      {% include "includes/field.html" with field=form.capabilities_statement extra_class="full" %}
+      {% include "includes/field.html" with field=form.signature_name %}
+      {% include "includes/field.html" with field=form.signature_title %}
+    </div>
     <h3 class="mt">File server &amp; HCL Notes</h3>
     <div class="form-grid">
       {% include "includes/field.html" with field=form.smb_path_template extra_class="full" %}

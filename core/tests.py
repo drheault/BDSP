@@ -23,7 +23,8 @@ class SeedAndCoreTests(TestCase):
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
 
     def test_login_required(self):
-        r = self.client.get(reverse("dashboard"))
+        self.assertContains(self.client.get(reverse("dashboard")), "Sign in")  # public landing page
+        r = self.client.get(reverse("proposal_list"))
         self.assertEqual(r.status_code, 302)
         self.assertIn(reverse("login"), r.url)
 

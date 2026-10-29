@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load social tagchips %}
+{% block title %}Calculations & tools{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Calculations &amp; tools</h1><div class="sub">Built-in design aids with the method shown, plus tools shared by colleagues. Likes and ratings move tools up or down.</div></div>
+<div class="actions"><form class="filters" method="get" style="margin:0"><input type="search" name="q" value="{{ q }}" placeholder="Search tools…"></form>
+<details class="reveal"><summary><span class="btn btn-primary">{% include "includes/icons.html" with name="plus" %} Share a tool</span></summary>
+<div class="card reveal-body" style="position:absolute;right:2rem;z-index:30;width:min(640px,90vw)"><div class="card-body"><form method="post" action="{% url 'tool_upload' %}" enctype="multipart/form-data">{% csrf_token %}{% include "includes/form.html" with full_fields=",description,summary,tags," %}<div class="form-actions"><button class="btn btn-primary">Share</button></div></form></div></div></details></div></div>
+{% tag_datalist_tag %}
+<div class="grid grid-3">
+  <div class="span-2 stack">
+  {% for cat, rows in cats.items %}
+    <div class="card"><div class="card-head"><h3>{{ cat }}</h3></div>
+      <table class="tbl"><tbody>{% for r in rows %}<tr><td><a class="strong" href="{% url 'tool_detail' r.tool.key %}">{{ r.tool.name }}</a> {% if r.tool.kind != "builtin" %}<span class="badge">{{ r.tool.get_kind_display }}</span>{% endif %}<br><small class="muted">{{ r.tool.summary }}</small> {% tag_chips r.tool True %}</td>
+        <td class="num" style="white-space:nowrap"><span title="likes / dislikes">▲ {{ r.up }} ▼ {{ r.down }}</span><br><small class="muted">{% if r.rating.n %}★ {{ r.rating.avg }} ({{ r.rating.n }}){% else %}not rated{% endif %} · {{ r.tool.runs }} runs</small></td></tr>{% endfor %}</tbody></table></div>
+  {% empty %}<div class="card"><div class="empty">No tools match.</div></div>{% endfor %}
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-head"><h3>My saved calculations</h3></div><table class="tbl"><tbody>{% for run in my_runs %}<tr><td><a href="{% url 'run_detail' run.pk %}">{{ run.title }}</a><br><small class="muted">{{ run.tool.name }}{% if run.proposal %} · {{ run.proposal.number }}{% endif %} · {{ run.created_at|date:"j M" }}</small></td></tr>{% empty %}<tr><td class="muted">Run a tool and give it a title to save it here, optionally against a proposal.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card"><div class="card-body"><h3>Philosophy</h3><p class="muted">Every built-in tool prints its formulas and references so a reviewer can check them by hand. They are screening aids for proposals and early design; checked calculation packages remain the record. Rate honestly, comment with specifics, and share the spreadsheets you trust.</p></div></div>
+  </div>
+</div>
+{% endblock %}

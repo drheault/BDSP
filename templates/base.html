@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% if theme_css %}<style id="theme-css">{{ theme_css|safe }}</style>{% elif company %}<style>:root{--navy:{{ company.primary_color }};--accent:{{ company.accent_color }};}</style>{% endif %}
-  <script>try{var t=localStorage.getItem("bdsp-text");if(t)document.documentElement.setAttribute("data-text",t)}catch(e){}</script>
+  <script>(function(){try{var h=document.documentElement,t=localStorage.getItem("bdsp-text");if(t)h.setAttribute("data-text",t);var m=localStorage.getItem("bdsp-mode")||"{{ theme_mode|default:'dark' }}";h.setAttribute("data-mode",m);if(localStorage.getItem("bdsp-sidebar")==="collapsed")h.setAttribute("data-sidebar","collapsed");var w=localStorage.getItem("bdsp-sidebar-w");if(w)h.style.setProperty("--sidebar-w",w+"px")}catch(e){}})()</script>
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <script>if(!window.htmx){document.write('<script src="{% static 'js/htmx.min.js' %}"><\/script>')}</script>
   {% block head %}{% endblock %}
@@ -16,7 +16,9 @@
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-boost="false">
 {% block body %}
 <div class="app">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+    <button type="button" class="sb-toggle" onclick="toggleSidebar()" title="Collapse / expand menu" aria-label="Collapse menu">{% include "includes/icons.html" with name="left" %}</button>
+    <div class="sb-resize" id="sb-resize" title="Drag to resize"></div>
     <a class="brand" href="{% url 'dashboard' %}">
       {% if company and company.logo %}<img src="{{ company.logo.url }}" alt="{{ company.name }} logo">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="logo">{% endif %}
       <span><span class="name">{{ company.name|default:"BDSP" }}</span><br><span class="tag">{{ company.tagline|default:"Business development" }}</span></span>
@@ -24,35 +26,46 @@
     {% with url_name=request.resolver_match.url_name %}
     <nav class="nav">
       <a href="{% url 'dashboard' %}" class="{% if url_name == 'dashboard' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
       <div class="label">Business development</div>
       <a href="{% url 'proposal_list' %}" class="{% if url_name|slice:':8' == 'proposal' or url_name|slice:':7' == 'section' or url_name|slice:':8' == 'staffing' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>Proposals</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span>Proposals</span></a>
       <a href="{% url 'programme' %}" class="{% if url_name == 'programme' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h8M3 12h12M3 18h6"/><rect x="13" y="4" width="8" height="4" rx="1"/><rect x="11" y="16" width="10" height="4" rx="1"/></svg>Programme</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h8M3 12h12M3 18h6"/><rect x="13" y="4" width="8" height="4" rx="1"/><rect x="11" y="16" width="10" height="4" rx="1"/></svg><span>Programme</span></a>
+      <a href="{% url 'tool_list' %}" class="{% if url_name|slice:':4' == 'tool' or url_name|slice:':3' == 'run' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h2M12 18h2M16 18h0"/></svg><span>Calculations</span></a>
       <a href="{% url 'client_list' %}" class="{% if url_name|slice:':6' == 'client' or url_name|slice:':7' == 'contact' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5A5 5 0 0 1 22 19"/></svg>Clients &amp; contacts</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5A5 5 0 0 1 22 19"/></svg><span>Clients &amp; contacts</span></a>
       <a href="{% url 'project_list' %}" class="{% if url_name|slice:':7' == 'project' or url_name|slice:':5' == 'image' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg>Project sheets</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg><span>Project sheets</span></a>
+      <a href="{% url 'people' %}" class="{% if url_name in 'people,person,my_profile' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>People &amp; skills</span></a>
+      <a href="{% url 'file_home' %}" class="{% if url_name|slice:':4' == 'file' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>File server</span></a>
       {% if can.view_metrics %}<a href="{% url 'metrics' %}" class="{% if url_name == 'metrics' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Metrics</a>{% endif %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Metrics</span></a>{% endif %}
       {% if can.manage_projects_library or can.edit_rates or can.manage_settings or can.manage_integrations or can.manage_users %}<div class="label">Setup</div>{% endif %}
+      <a href="{% url 'tag_index' %}" class="{% if url_name|slice:':3' == 'tag' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12 12 20l-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Tags</span></a>
+      {% if can.manage_forms %}<a href="{% url 'form_builder_home' %}" class="{% if url_name|slice:':12' == 'form_builder' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6M7 17h8"/></svg><span>Form builder</span></a>{% endif %}
       {% if can.manage_projects_library %}
       <a href="{% url 'template_list' %}" class="{% if url_name|slice:':8' == 'template' or url_name|slice:':8' == 'tsection' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Proposal templates</a>{% endif %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Proposal templates</span></a>{% endif %}
       <a href="{% url 'library' %}" class="{% if url_name == 'library' or url_name|slice:':7' == 'service' or url_name|slice:':4' == 'role' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M4 19a2 2 0 0 0 2 2h14M9 7h6"/></svg>Services &amp; rates</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M4 19a2 2 0 0 0 2 2h14M9 7h6"/></svg><span>Services &amp; rates</span></a>
       {% if can.manage_settings %}<a href="{% url 'company_settings' %}" class="{% if url_name == 'company_settings' %}active{% endif %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Company settings</a>{% endif %}
-      {% if can.manage_settings %}<a href="{% url 'appearance' %}" class="{% if url_name|slice:':10' == 'appearance' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor"/><path d="M12 21c-1.5 0-2-1.5-1-2.5s2-1.5 3.5-1.5H16a3 3 0 0 0 0-6"/></svg>Appearance</a>{% endif %}
-      {% if can.manage_integrations %}<a href="{% url 'integrations' %}" class="{% if url_name == 'integrations' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>Integrations</a>{% endif %}
-      {% if can.manage_users %}<a href="{% url 'roles' %}" class="{% if url_name in 'roles,role_create,role_edit,users,user_create,user_edit' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Roles &amp; users</a>{% endif %}
-      {% if user.is_staff %}<a href="{% url 'admin:index' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7z"/></svg>Admin</a>{% endif %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Company settings</span></a>{% endif %}
+      {% if can.manage_settings %}<a href="{% url 'appearance' %}" class="{% if url_name|slice:':10' == 'appearance' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor"/><path d="M12 21c-1.5 0-2-1.5-1-2.5s2-1.5 3.5-1.5H16a3 3 0 0 0 0-6"/></svg><span>Appearance</span></a>{% endif %}
+      {% if can.manage_integrations %}<a href="{% url 'integrations' %}" class="{% if url_name == 'integrations' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg><span>Integrations</span></a>{% endif %}
+      {% if can.manage_users %}<a href="{% url 'roles' %}" class="{% if url_name in 'roles,role_create,role_edit,users,user_create,user_edit' %}active{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Roles &amp; users</span></a>{% endif %}
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7z"/></svg><span>Admin</span></a>{% endif %}
     </nav>
     {% endwith %}
     <div class="user">
       <span title="{{ user.username }}">{{ user.get_full_name|default:user.username }}</span>
       <details class="menu"><summary class="btn btn-sm btn-icon" title="Account & display">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items">
+        <a href="{% url 'my_profile' %}">{% include "includes/icons.html" with name="edit" %} My profile &amp; skills</a><hr>
+        <div class="muted" style="padding:.3rem .7rem 0;font-size:.78rem">Appearance</div>
+        <div class="group"><button type="button" onclick="setMode('dark')">Dark</button><button type="button" onclick="setMode('light')">Light</button></div>
         <div class="muted" style="padding:.3rem .7rem 0;font-size:.78rem">Text size</div>
         <div class="group"><button type="button" onclick="setText('')">Normal</button><button type="button" onclick="setText('large')">Large</button><button type="button" onclick="setText('xlarge')">Larger</button></div>
         <hr><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
@@ -67,6 +80,9 @@
 <div class="messages">{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}</div>
 {% endif %}
 <script>
+  function setMode(v){try{localStorage.setItem("bdsp-mode",v);document.documentElement.setAttribute("data-mode",v)}catch(e){}}
+  function toggleSidebar(){var h=document.documentElement,c=h.getAttribute("data-sidebar")==="collapsed";if(c){h.removeAttribute("data-sidebar");try{localStorage.removeItem("bdsp-sidebar")}catch(e){}}else{h.setAttribute("data-sidebar","collapsed");try{localStorage.setItem("bdsp-sidebar","collapsed")}catch(e){}}}
+  (function(){var r=document.getElementById("sb-resize");if(!r)return;var drag=false;r.addEventListener("mousedown",function(e){drag=true;e.preventDefault();document.body.style.userSelect="none"});document.addEventListener("mousemove",function(e){if(!drag)return;var w=Math.min(420,Math.max(180,e.clientX));document.documentElement.style.setProperty("--sidebar-w",w+"px")});document.addEventListener("mouseup",function(e){if(!drag)return;drag=false;document.body.style.userSelect="";try{localStorage.setItem("bdsp-sidebar-w",parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-w")))}catch(x){}})})();
   function setText(v){try{if(v){localStorage.setItem("bdsp-text",v);document.documentElement.setAttribute("data-text",v)}else{localStorage.removeItem("bdsp-text");document.documentElement.removeAttribute("data-text")}}catch(e){}}
   // Close open menus after a click inside them or on Escape.
   document.addEventListener("click", function (e) { var m = e.target.closest(".menu-items"); if (m && e.target.closest("a,button")) { setTimeout(function(){ m.closest("details").removeAttribute("open"); }, 0); } });

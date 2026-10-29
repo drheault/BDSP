@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load social %}
+{% block title %}{{ person.get_full_name|default:person.username }}{% endblock %}
+{% block content %}
+<div class="page-head"><div class="row-flex">{% avatar person 72 %}<div><div class="crumbs"><a href="{% url 'people' %}">People</a> /</div><h1>{{ person.get_full_name|default:person.username }}</h1><div class="sub">{{ person.profile.title|default:"" }}{% if person.profile.office %} · {{ person.profile.office }}{% endif %}{% for r in person.access_roles.all %} · <span class="badge">{{ r.name }}</span>{% endfor %}</div></div></div>
+<div class="actions">{% if person == request.user %}<a class="btn" href="{% url 'my_profile' %}">{% include "includes/icons.html" with name="edit" %} Edit profile</a>{% endif %}{% if person.profile.linkedin %}<a class="btn" href="{{ person.profile.linkedin }}" target="_blank" rel="noopener">LinkedIn</a>{% endif %}</div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    {% if person.profile.bio %}<div class="card"><div class="card-body">{{ person.profile.bio|linebreaks }}</div></div>{% endif %}
+    <div class="card"><div class="card-head"><h3>Skills</h3><span class="muted">self-rating · endorsed level (n)</span></div>
+      <table class="tbl"><thead><tr><th>Skill</th><th>Self</th><th>Endorsed</th><th>Combined</th><th></th></tr></thead><tbody>
+      {% for us in skills %}<tr><td><strong>{{ us.skill.name }}</strong>{% if us.is_learning %} <span class="badge badge-submitted">learning</span>{% endif %}{% if us.note %}<br><small class="muted">{{ us.note }}</small>{% endif %}</td><td>{{ us.get_self_level_display }}</td><td>{% with e=us.endorsed_level %}{% if e.n %}{{ e.avg }}/5 <small class="muted">({{ e.n }})</small>{% else %}—{% endif %}{% endwith %}</td><td><div class="progress" style="width:90px"><i style="width:{% widthratio us.combined_level 5 100 %}%"></i></div><small>{{ us.combined_level }}/5</small></td>
+      <td class="row-actions">{% if can_endorse and us.is_learning and person.profile.looking_for_mentor and not us.is_learning %}{% endif %}{% if can_endorse and not us.is_learning and person.profile.open_to_mentor %}<form method="post" action="{% url 'mentor_propose' person.pk %}">{% csrf_token %}<input type="hidden" name="skill" value="{{ us.skill.pk }}"><button class="btn btn-xs">Ask to mentor me</button></form>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="muted">No skills listed yet.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card"><div class="card-head"><h3>Endorsements received</h3></div>
+      <table class="tbl"><tbody>{% for e in received %}<tr><td>{% avatar e.from_user 24 %} <a href="{% url 'person' e.from_user.pk %}">{{ e.from_user.get_full_name|default:e.from_user.username }}</a> rated <strong>{{ e.skill }}</strong> {{ e.get_level_display }}<br><small class="muted">“{{ e.context }}” · {{ e.created_at|date:"j M Y" }}</small></td></tr>{% empty %}<tr><td class="muted">None yet.</td></tr>{% endfor %}</tbody></table></div>
+    {% if mentoring or mentored %}<div class="card"><div class="card-head"><h3>Mentoring</h3></div><table class="tbl"><tbody>
+      {% for m in mentoring %}<tr><td>Mentors <a href="{% url 'person' m.mentee.pk %}">{{ m.mentee.get_full_name|default:m.mentee.username }}</a> in <strong>{{ m.skill }}</strong> <span class="badge">{{ m.get_status_display }}</span></td><td class="row-actions">{% if m.status == "proposed" and m.mentor == request.user %}<form method="post" action="{% url 'mentor_respond' m.pk 'accept' %}" style="display:inline">{% csrf_token %}<button class="btn btn-xs btn-primary">Accept</button></form> <form method="post" action="{% url 'mentor_respond' m.pk 'decline' %}" style="display:inline">{% csrf_token %}<button class="btn btn-xs">Decline</button></form>{% elif m.status == "active" and request.user.pk in m.mentor_id|stringformat:"s"|add:m.mentee_id|stringformat:"s" %}{% endif %}{% if m.status == "active" and m.mentor == request.user %}<form method="post" action="{% url 'mentor_respond' m.pk 'done' %}" style="display:inline">{% csrf_token %}<button class="btn btn-xs">Mark complete</button></form>{% endif %}</td></tr>{% endfor %}
+      {% for m in mentored %}<tr><td>Mentored by <a href="{% url 'person' m.mentor.pk %}">{{ m.mentor.get_full_name|default:m.mentor.username }}</a> in <strong>{{ m.skill }}</strong> <span class="badge">{{ m.get_status_display }}</span></td><td></td></tr>{% endfor %}
+    </tbody></table></div>{% endif %}
+    {% comments_for person "Notes & kudos" %}
+  </div>
+  <div class="stack">
+    {% if can_endorse %}<div class="card"><div class="card-body"><h3>Endorse a skill</h3><p class="muted">Only skills this person lists. Say where you saw it.</p>
+      <form method="post" action="{% url 'endorse' person.pk %}" class="stack">{% csrf_token %}{% include "includes/field.html" with field=endorse_form.skill %}{% include "includes/field.html" with field=endorse_form.level %}{% include "includes/field.html" with field=endorse_form.context %}<button class="btn btn-primary">Endorse</button></form></div></div>{% endif %}
+    {% if tools %}<div class="card"><div class="card-head"><h3>Tools shared</h3></div><table class="tbl"><tbody>{% for t in tools %}<tr><td><a href="{% url 'tool_detail' t.key %}">{{ t.name }}</a></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    {% if proposals %}<div class="card"><div class="card-head"><h3>Pursuits led</h3></div><table class="tbl"><tbody>{% for p in proposals %}<tr><td><a href="{% url 'proposal_detail' p.pk %}">{{ p.title|truncatechars:40 }}</a> {% include "proposals/_status_badge.html" with proposal=p %}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

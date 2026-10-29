@@ -1,10 +1,10 @@
-{% load humanize %}
+{% load humanize tagchips %}
 <div class="gallery">
 {% for p in projects %}
   <a class="pcard" href="{% url 'project_detail' p.pk %}" style="color:inherit;text-decoration:none">
     <div class="img">{% if p.cover %}<img src="{{ p.cover.image.url }}" alt="{{ p.cover.caption|default:p.name }}">{% else %}<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><path d="M14 50V34a18 18 0 0 1 36 0v16"/><path d="M10 50h44"/></svg>{% endif %}</div>
     <div class="b"><span class="t">{{ p.name }}</span><div class="m">{{ p.display_client|default:"—" }}{% if p.location %} · {{ p.location }}{% endif %}</div>
-    <div class="m mt-sm"><span class="badge">{{ p.get_kind_display }}</span>{% if p.year_completed %} {{ p.year_completed }}{% endif %}{% if p.construction_value %} · ${{ p.construction_value|intcomma }}{% endif %}{% if p.is_featured %} · <span class="badge badge-construction">featured</span>{% endif %}</div></div>
+    <div class="m mt-sm"><span class="badge">{{ p.get_kind_display }}</span>{% if p.year_completed %} {{ p.year_completed }}{% endif %}{% if p.construction_value %} · ${{ p.construction_value|intcomma }}{% endif %}{% if p.is_featured %} · <span class="badge badge-construction">featured</span>{% endif %}{% if not p.is_published %} · <span class="badge">draft</span>{% endif %}</div>{% tag_chips p True %}</div>
   </a>
 {% empty %}<div class="card" style="grid-column:1/-1"><div class="empty"><strong>No project sheets</strong>Add your first past project to start the portfolio.</div></div>{% endfor %}
 </div>

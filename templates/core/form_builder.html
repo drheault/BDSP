@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Form builder{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Form builder</h1><div class="sub">Choose which inputs each form shows, make them required, relabel and reorder them, and add your own fields. Changes apply to everyone the next time the form opens.</div></div></div>
+<div class="tabs">{% for key, label in form_keys %}<a href="{% url 'form_builder' key %}" class="{% if key == form_key %}active{% endif %}">{{ label }}</a>{% endfor %}</div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-head"><h3>Built-in inputs</h3><form method="post" action="{% url 'form_builder_reset' form_key %}" data-confirm="Reset this form to its default layout?">{% csrf_token %}<button class="btn btn-sm btn-ghost">Reset to default</button></form></div>
+      <form method="post" action="{% url 'form_builder_save' form_key %}">{% csrf_token %}
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>Show</th><th>Field</th><th>Label (override)</th><th>Help text</th><th>Required</th><th style="width:80px">Order</th></tr></thead><tbody>
+      {% for r in rows %}<tr><td><input type="checkbox" name="visible_{{ r.name }}" {% if r.visible %}checked{% endif %}></td><td class="mono">{{ r.name }}</td><td><input type="text" name="label_{{ r.name }}" value="{{ r.label }}" placeholder="default"></td><td><input type="text" name="help_{{ r.name }}" value="{{ r.help }}" placeholder="default"></td>
+        <td><select name="required_{{ r.name }}"><option value="" {% if r.required is None %}selected{% endif %}>Default</option><option value="true" {% if r.required %}selected{% endif %}>Required</option><option value="false" {% if r.required is False %}selected{% endif %}>Optional</option></select></td><td><input type="number" name="order_{{ r.name }}" value="{{ r.order }}" style="width:80px"></td></tr>{% endfor %}
+      </tbody></table></div>
+      <div class="card-body"><button class="btn btn-primary">Save layout</button> <span class="muted">Hidden fields keep their stored values; required fields block saving when empty.</span></div></form></div>
+    <div class="card"><div class="card-head"><h3>Custom fields</h3></div>
+      <table class="tbl"><thead><tr><th>Key</th><th>Label</th><th>Type</th><th>Required</th><th>Printed</th><th></th></tr></thead><tbody>
+      {% for c in custom %}<tr {% if not c.is_active %}style="opacity:.5"{% endif %}><td class="mono">{{ c.key }}</td><td>{{ c.label }}{% if c.help_text %}<br><small class="muted">{{ c.help_text }}</small>{% endif %}</td><td>{{ c.get_type_display }}{% if c.choices %}<br><small class="muted">{{ c.choices }}</small>{% endif %}</td><td>{{ c.required|yesno:"yes,no" }}</td><td>{{ c.show_in_export|yesno:"yes,no" }}</td>
+        <td class="row-actions"><form method="post" action="{% url 'custom_field_delete' c.pk %}" data-confirm="Delete custom field {{ c.label }}? Stored values stay in the data but are no longer shown.">{% csrf_token %}<button class="btn btn-xs btn-danger">×</button></form></td></tr>
+      {% empty %}<tr><td colspan="6" class="muted">No custom fields on this form yet.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="card"><div class="card-body"><h3>Add a custom field</h3>
+    <form method="post" action="{% url 'custom_field_save' %}" class="stack">{% csrf_token %}<input type="hidden" name="form_key" value="{{ form_key }}">
+      {% include "includes/field.html" with field=cf_form.key %}{% include "includes/field.html" with field=cf_form.label %}{% include "includes/field.html" with field=cf_form.type %}{% include "includes/field.html" with field=cf_form.choices %}{% include "includes/field.html" with field=cf_form.help_text %}{% include "includes/field.html" with field=cf_form.order %}
+      {% include "includes/field.html" with field=cf_form.required %}{% include "includes/field.html" with field=cf_form.show_in_export %}{% include "includes/field.html" with field=cf_form.is_active %}
+      <button class="btn btn-primary">Add field</button></form>
+    <p class="muted mt">Examples: “Procurement route” (choice), “Client reference number” (text), “Site visit done” (yes/no). Values are stored with the record and can be printed on documents.</p></div></div>
+</div>
+{% endblock %}

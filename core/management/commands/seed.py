@@ -27,6 +27,30 @@ from proposals.models import (
 )
 from scheduling.gantt import create_default_tasks
 from timesheets.models import ActualEntry
+from tags.models import Tag, TagCategory
+from community.models import Profile, Skill, UserSkill
+from files.models import FileRoot
+from calcs.views import ensure_builtins
+
+TAGS = {
+    # category: (weight, color, [tags])
+    "Structure": (1.5, "#b8962e", ["Running tunnel", "Station cavern", "Shaft", "Cross-passage", "Cut-and-cover", "Microtunnel", "Portal", "Binocular tunnel"]),
+    "Method": (1.5, "#2f80ad", ["SEM / NATM", "TBM – EPB", "TBM – slurry", "Drill & blast", "Microtunnelling", "Jet grouting", "Ground freezing", "Immersed tube"]),
+    "Ground": (1.25, "#3a9d6a", ["Soft ground", "Mixed face", "Hard rock", "Glacial till", "Karst", "Squeezing ground", "High groundwater"]),
+    "Sector": (1.0, "#8e6cb8", ["Metro / transit", "Rail", "Road", "Water / wastewater", "Hydropower", "Utilities", "Mining"]),
+    "Service": (1.0, "#e07a1f", ["Design", "Construction support", "Peer review", "Instrumentation & monitoring", "Risk management", "Numerical modelling"]),
+    "Software": (0.75, "#6b7f99", ["Plaxis", "FLAC", "RS2", "Abaqus", "Revit", "Civil 3D"]),
+    "Document": (0.5, "#9aa5b1", ["Site visit report", "Photo dump", "Monitoring data", "Calculation", "Numerical model", "Presentation", "Drawing"]),
+    "Phase": (0.5, "#5f6f7c", ["Feasibility", "Preliminary design", "Detailed design", "Construction", "Close-out"]),
+}
+
+SKILLS = [
+    ("SEM / NATM design", "Design"), ("Segmental lining design", "Design"), ("Shaft design", "Design"), ("Cavern design", "Design"), ("Temporary works", "Design"),
+    ("Settlement & building damage assessment", "Analysis"), ("Face stability", "Analysis"), ("Numerical modelling (FE/FD)", "Analysis"), ("Fibre-reinforced shotcrete", "Design"),
+    ("Site engineering & inspection", "Site"), ("Instrumentation & monitoring", "Site"), ("TBM launch & logistics", "Site"), ("Ground improvement", "Design"),
+    ("Plaxis", "Software"), ("FLAC3D", "Software"), ("RS2", "Software"), ("Revit / BIM", "Software"),
+    ("Proposal writing", "Management"), ("Fee estimating", "Management"), ("Project management", "Management"), ("Client relations", "Management"), ("Mentoring", "Management"),
+]
 
 CURRENCIES = [
     # code, name, symbol, rate to CAD (indicative — edit under Company settings)
@@ -227,6 +251,33 @@ class Command(BaseCommand):
             AccessRole.objects.get_or_create(name=name, defaults={"rank": rank, "description": desc, "capabilities": CAPABILITY_KEYS if caps == "ALL" else caps, "is_system": True})
         self.stdout.write(f"Regions: {Region.objects.count()}, access roles: {AccessRole.objects.count()}")
 
+        for i, (cat, (weight, color, names)) in enumerate(TAGS.items()):
+            c, _ = TagCategory.objects.get_or_create(name=cat, defaults={"weight": weight, "color": color, "order": i})
+            for n in names:
+                Tag.objects.get_or_create(name=n, category=c)
+        for name, cat in SKILLS:
+            Skill.objects.get_or_create(name=name, defaults={"category": cat})
+        ensure_builtins()
+        FileRoot.objects.get_or_create(name="Project share", defaults={"kind": "mount", "path": "/mnt/projects", "project_folder_template": "{phase_name}/{project_number}"})
+        self.stdout.write(f"Tags: {Tag.objects.count()} in {TagCategory.objects.count()} categories, skills: {Skill.objects.count()}, tools: {__import__('calcs.models', fromlist=['Tool']).Tool.objects.count()}")
+
+        # tag the service catalogue
+        for svc in Service.objects.all():
+            n = svc.name.lower()
+            names = []
+            if "tbm" in n: names += ["TBM – EPB", "Running tunnel"]
+            if "sem" in n or "natm" in n: names += ["SEM / NATM"]
+            if "shaft" in n: names += ["Shaft", "Cross-passage"]
+            if "cavern" in n or "station" in n: names += ["Station cavern"]
+            if "cut-and-cover" in n: names += ["Cut-and-cover"]
+            if "microtunnel" in n: names += ["Microtunnel", "Microtunnelling"]
+            if "numerical" in n or "settlement" in n: names += ["Numerical modelling"]
+            if "monitoring" in n: names += ["Instrumentation & monitoring"]
+            if "risk" in n: names += ["Risk management"]
+            if "review" in n: names += ["Peer review"]
+            names.append("Design" if svc.category == "design" else "Construction support" if svc.category == "construction" else "Peer review")
+            svc.set_tags(names)
+
         for i, (cat, name) in enumerate(SERVICES):
             Service.objects.get_or_create(name=name, defaults={"category": cat, "sort_order": i})
         for i, (title, rate) in enumerate(ROLES):
@@ -271,6 +322,16 @@ class Command(BaseCommand):
             eng.save()
         AccessRole.objects.get(name="Engineers").users.add(eng)
         on, bc, ny = Region.objects.get(code="ON"), Region.objects.get(code="BC"), Region.objects.get(code="NY")
+        for u, title, office, have, learning in (
+            (lead1, "Partner", "Toronto", [("SEM / NATM design", 5), ("Cavern design", 5), ("Proposal writing", 5), ("Client relations", 5), ("Mentoring", 4)], []),
+            (lead2, "Senior Associate", "Toronto", [("Segmental lining design", 4), ("Fee estimating", 4), ("Numerical modelling (FE/FD)", 4), ("Plaxis", 4), ("Project management", 4)], ["Cavern design"]),
+            (eng, "Engineer", "Toronto", [("Numerical modelling (FE/FD)", 2), ("Plaxis", 3), ("Settlement & building damage assessment", 2)], ["SEM / NATM design", "Fee estimating", "Face stability"]),
+        ):
+            Profile.objects.update_or_create(user=u, defaults={"title": title, "office": office})
+            for name, lvl in have:
+                UserSkill.objects.update_or_create(user=u, skill=Skill.objects.get(name=name), defaults={"self_level": lvl, "is_learning": False})
+            for name in learning:
+                UserSkill.objects.update_or_create(user=u, skill=Skill.objects.get(name=name), defaults={"self_level": 1, "is_learning": True})
 
         transit, _ = Client.objects.get_or_create(name="Metro Transit Authority", defaults={"sector": "public", "website": "https://example.org"})
         water, _ = Client.objects.get_or_create(name="Regional Water District", defaults={"sector": "utility"})
@@ -305,6 +366,7 @@ class Command(BaseCommand):
         )
         p1.apply_template(design_t)
         p1.services.set(Service.objects.filter(category="design")[:7])
+        p1.set_tags(["Running tunnel", "TBM – EPB", "Cross-passage", "Shaft", "Glacial till", "Mixed face", "Metro / transit", "Design", "Detailed design"])
         wbs(p1, [
             ("1", "Project management & QA", "pm", [("Maria", 160), ("James", 420), ("Elena", 200), ("expense", "travel", "Client meetings, 12 trips", 12, 650, 0)]),
             ("2", "Geotechnical interpretation & GBR", "report", [("Hannah", 420), ("Lukas", 120), ("Daniel", 160)]),
@@ -324,6 +386,7 @@ class Command(BaseCommand):
         )
         p2.apply_template(cs_t)
         p2.services.set(Service.objects.filter(category="construction"))
+        p2.set_tags(["Running tunnel", "TBM – slurry", "Shaft", "Water / wastewater", "Construction support", "Instrumentation & monitoring", "Construction"])
         wbs(p2, [
             ("1", "Construction support lead & reporting", "pm", [("James", 420)]),
             ("2", "Submittal & shop drawing review", "site", [("Priya", 600), ("Daniel", 300)]),
@@ -349,6 +412,8 @@ class Command(BaseCommand):
             summary="Design of a 24 m span, 230 m long SEM mined station cavern with twin entrance shafts, for a design-build joint venture.",
         )
         p4.apply_template(design_t)
+        p4.set_tags(["Station cavern", "SEM / NATM", "Shaft", "Metro / transit", "Design", "Construction support", "Numerical modelling", "Plaxis"])
+        p4.services.set(Service.objects.filter(category="design")[:6])
         wbs(p4, [
             ("1", "Project management & QA", "pm", [("Maria", 300), ("James", 700), ("Elena", 240)]),
             ("2", "Geotechnical interpretation & GBR", "report", [("Hannah", 380), ("Lukas", 100)]),
@@ -404,21 +469,49 @@ class Command(BaseCommand):
             ProjectRecord.objects.create(proposal=exec_p, kind=kind, date=today - timedelta(days=30 - i * 6), title=title, value=val, unit=unit, path=f"{exec_p.smb_path}\\{kind}\\", created_by=lead2)
 
         projects = [
-            ("Riverside Transit Tunnels", transit, "tunnel", "Lead designer", 2022, 410_000_000, "Twin 6.0 m ID EPB TBM tunnels, 3.8 km, 28 m deep", (15, 61, 94)),
-            ("Lakeview Pumping Station Cavern", water, "cavern", "Engineer of record", 2020, 185_000_000, "22 m span × 18 m high × 120 m long SEM cavern", (224, 122, 31)),
-            ("Harbourfront Access Shafts", jv, "shaft", "Design-build designer", 2023, 62_000_000, "Three 14 m ID diaphragm-wall shafts, 42 m deep", (46, 110, 140)),
-            ("Old Town Interceptor Microtunnel", water, "micro", "Lead designer & CM support", 2019, 28_000_000, "1.8 m ID, 1.2 km microtunnel under historic district", (58, 157, 106)),
+            ("Riverside Transit Tunnels", transit, "tunnel", "Lead designer", 2022, 410_000_000, "Twin 6.0 m ID EPB TBM tunnels, 3.8 km, 28 m deep", (15, 61, 94),
+             "Twin-bore EPB TBM running tunnels beneath a dense downtown corridor, with four cross-passages and two ventilation shafts in glacial till and water-bearing sands.",
+             "Mixed-face conditions at the river crossing; 6 m clearance beneath a 1920s masonry viaduct; a 7-week launch window dictated by a traffic diversion.",
+             "Segmental lining optimised with 3D FE; face-pressure windows tied to monitoring triggers; cross-passages designed for ground freezing with a 30% shorter freeze programme.",
+             "Lining thickness reduced from 350 mm to 300 mm (8% of lining cost); settlement under the viaduct held to 9 mm against a 25 mm limit; launch achieved inside the window.",
+             ["Running tunnel", "TBM – EPB", "Cross-passage", "Shaft", "Glacial till", "Mixed face", "Metro / transit", "Design", "Numerical modelling", "Plaxis"], ["TBM tunnel design (segmental lining)", "Shaft & cross-passage design", "Numerical modelling (FE/FD) & settlement assessment", "Instrumentation & monitoring review"]),
+            ("Lakeview Pumping Station Cavern", water, "cavern", "Engineer of record", 2020, 185_000_000, "22 m span × 18 m high × 120 m long SEM cavern", (224, 122, 31),
+             "A 22 m span pumping-station cavern excavated by SEM in shale with a 35 m rock cover, connected to a 3.6 m ID inflow tunnel and two 10 m shafts.",
+             "Bedding-parallel shear zones crossing the crown; strict vibration limits beside a hospital; permanent dry conditions required for the equipment hall.",
+             "Top-heading/bench sequence with fibre-reinforced shotcrete and spiling through the shear zones; drill-and-blast vibration design per round; waterproofed secondary lining.",
+             "Cavern delivered 3 months early; no vibration exceedance across 410 blasts; shotcrete lining saved an estimated 2,100 m³ of cast concrete.",
+             ["Station cavern", "SEM / NATM", "Drill & blast", "Hard rock", "Water / wastewater", "Design", "Construction support", "Fibre-reinforced shotcrete" if False else "Design"], ["SEM / NATM tunnel design", "Cavern & large underground station design", "Resident engineering & site inspection"]),
+            ("Harbourfront Access Shafts", jv, "shaft", "Design-build designer", 2023, 62_000_000, "Three 14 m ID diaphragm-wall shafts, 42 m deep", (46, 110, 140),
+             "Three 14 m internal-diameter shafts, 42 m deep, as TBM launch and reception structures on reclaimed fill over marine clay and glacial till.",
+             "Artesian pressure in the till; a live rail corridor 9 m from the nearest shaft; TBM reception through a diaphragm wall under 3 bar.",
+             "Diaphragm-wall shafts with a jet-grout plug and relief wells; soft-eye design with GFRP reinforcement; staged dewatering tied to rail monitoring.",
+             "Rail settlement limited to 6 mm; reception completed without intervention; design-build partner's programme shortened by 5 weeks.",
+             ["Shaft", "Cut-and-cover", "High groundwater", "Soft ground", "Metro / transit", "Design", "Jet grouting"], ["Shaft & cross-passage design", "Ground improvement & groundwater control", "TBM readiness & launch support"]),
+            ("Old Town Interceptor Microtunnel", water, "micro", "Lead designer & CM support", 2019, 28_000_000, "1.8 m ID, 1.2 km microtunnel under historic district", (58, 157, 106),
+             "A 1.8 m ID microtunnelled interceptor sewer, 1.2 km in four drives beneath a protected historic district, with five 8 m shafts.",
+             "Heritage foundations within 3 m of the alignment; cobbles and boulders in the glacial outwash; night-only working in two blocks.",
+             "Slurry microtunnelling with a crusher head; shaft locations negotiated with the heritage authority; real-time settlement dashboards for the contractor.",
+             "No damage claims from 34 heritage properties; drives completed 11% under the contractor's estimate; the dashboard became the client's standard.",
+             ["Microtunnel", "Microtunnelling", "Soft ground", "Water / wastewater", "Design", "Construction support", "Instrumentation & monitoring"], ["Microtunnelling & trenchless design", "Resident engineering & site inspection"]),
         ]
-        for name, client, kind, role, year, value, dims, color in projects:
+        for name, client, kind, role, year, value, dims, color, desc, chal, contrib, val, tags, svcs in projects:
             pr = PastProject.objects.create(
-                name=name, client=client, kind=kind, role=role, year_completed=year, construction_value=value,
+                name=name, client=client, kind=kind, role=role, year_completed=year, construction_value=value, duration_months={"tunnel": 42, "cavern": 30, "shaft": 24, "micro": 18}[kind],
                 key_dimensions=dims, location="Metro region", is_featured=kind in ("tunnel", "cavern"),
-                description=f"{name} is a representative {dict(PastProject.Kind.choices)[kind].lower()} project delivered for {client.name}. Replace this text with the real project narrative: ground conditions, construction method, key design features and outcomes.",
-                highlights="Delivered on schedule with no lost-time incidents\nSettlement kept within 10 mm beneath sensitive structures\nValue-engineered lining saved 8% of construction cost",
+                description=desc, challenges=chal, contribution=contrib, value_added=val,
+                highlights="Delivered on schedule with no lost-time incidents\nSettlement kept within limits beneath sensitive structures\nValue-engineered design saved construction cost",
+                source_path=f"\\\\fileserver\\Projects\\Execution\\{name.replace(' ', '')}",
             )
+            pr.set_tags(tags)
+            pr.services.set(Service.objects.filter(name__in=svcs))
             img = _placeholder_image(name, color)
             if img:
                 ProjectImage.objects.create(project=pr, image=img, caption=f"{name} — placeholder image", order=0)
+        # attach the two most relevant sheets to the live design pursuit
+        from proposals.models import ProposalAttachment
+
+        for i, s_ in enumerate(p1.suggested_sheets(limit=2)):
+            ProposalAttachment.objects.get_or_create(proposal=p1, project=s_["sheet"], defaults={"kind": "sheet", "order": i})
 
         self.stdout.write(f"Demo: {Client.objects.count()} clients, {Proposal.objects.count()} proposals, {PastProject.objects.count()} project sheets.")
         self.stdout.write(self.style.WARNING("Demo users mrivera / jchen have password 'password'."))

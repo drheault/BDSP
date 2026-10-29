@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% load static %}
 {% block title %}Sign in{% endblock %}
 {% block body %}
-<div class="login-wrap">
+<div class="login-wrap" style="background:radial-gradient(ellipse at 50% 60%, rgba(201,168,76,.28), rgba(15,19,23,0) 55%), #0f1317">
   <div class="card login"><div class="card-body">
     <a class="brand" href="/">
       {% if company and company.logo %}<img src="{{ company.logo.url }}" alt="">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="">{% endif %}
@@ -12,8 +12,9 @@
       <div class="field"><label for="id_username">Username</label><input type="text" name="username" id="id_username" autofocus required></div>
       <div class="field"><label for="id_password">Password</label><input type="password" name="password" id="id_password" required></div>
       <input type="hidden" name="next" value="{{ next }}">
-      <button class="btn btn-primary" type="submit" style="justify-content:center">Sign in</button>
+      <button class="btn btn-accent" type="submit" style="justify-content:center">Sign in</button>
     </form>
+    <div class="muted mt" style="text-align:center;font-size:.8rem"><a href="/">← tunnelvision.ca</a></div>
   </div></div>
 </div>
 {% endblock %}

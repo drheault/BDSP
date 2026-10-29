@@ -1,0 +1,7 @@
+{% load tagchips %}<tr id="sheet-{{ s.sheet.pk }}" class="{% if s.attached %}attached{% endif %}">
+  <td><input type="checkbox" {% if s.attached %}checked{% endif %} {% if can.edit_proposals %}hx-post="{% url 'attachment_toggle' proposal.pk s.sheet.pk %}" hx-target="#sheet-{{ s.sheet.pk }}" hx-swap="outerHTML"{% else %}disabled{% endif %} title="Attach / detach"></td>
+  <td>{% if s.sheet.cover %}<img class="thumb" src="{{ s.sheet.cover.image.url }}" alt="">{% else %}<span class="thumb thumb-empty"></span>{% endif %}</td>
+  <td><strong>{{ s.sheet.name }}</strong><br><small class="muted">{{ s.sheet.display_client }}{% if s.sheet.location %} · {{ s.sheet.location }}{% endif %}{% if s.sheet.year_completed %} · {{ s.sheet.year_completed }}{% endif %} · {{ s.sheet.get_kind_display }}</small> {% tag_chips s.sheet True %}</td>
+  <td><div class="rel"><div class="progress" style="width:90px"><i style="width:{{ s.score }}%;{% if s.score < 25 %}background:var(--line-2){% elif s.score < 50 %}background:var(--warn){% endif %}"></i></div><small>{{ s.score }}%{% if s.reasons %} · {{ s.reasons|join:"; " }}{% endif %}</small></div></td>
+  <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'project_preview' s.sheet.pk %}" hx-target="#sheet-preview" hx-swap="innerHTML">{% include "includes/icons.html" with name="eye" %} Preview</button></td>
+</tr>

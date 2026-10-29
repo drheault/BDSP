@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load social %}
+{% block title %}People & skills{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>People &amp; skills</h1><div class="sub">Who knows what, who is learning what, and who could mentor whom.</div></div>
+<div class="actions"><a class="btn" href="{% url 'my_profile' %}">{% include "includes/icons.html" with name="edit" %} My profile &amp; skills</a></div></div>
+<form class="filters" method="get"><input type="search" name="q" value="{{ q }}" placeholder="Name or skill…"><select name="skill" onchange="this.form.submit()"><option value="">Any skill</option>{% for s in skills %}<option value="{{ s.pk }}" {% if skill == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }} ({{ s.n }})</option>{% endfor %}</select><button class="btn">Filter</button></form>
+<div class="grid grid-3">
+  <div class="span-2"><div class="gallery" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">
+    {% for u in users %}<a class="pcard person-card" href="{% url 'person' u.pk %}"><div class="b"><div class="row-flex">{% avatar u 48 %}<div><span class="t">{{ u.get_full_name|default:u.username }}</span><div class="m">{{ u.profile.title|default:"" }}{% if u.profile.office %} · {{ u.profile.office }}{% endif %}</div></div></div>
+      <div class="chips mt-sm">{% for us in u.skills.all|slice:":5" %}<span class="chip chip-sm {% if us.is_learning %}chip-learn{% endif %}" title="{{ us.get_self_level_display }}">{{ us.skill.name }}{% if us.is_learning %} ↗{% endif %}</span>{% endfor %}</div>
+      <div class="m mt-sm">{% for r in u.access_roles.all %}<span class="badge">{{ r.name }}</span> {% endfor %}</div></div></a>
+    {% empty %}<div class="card" style="grid-column:1/-1"><div class="empty">No one matches.</div></div>{% endfor %}
+  </div></div>
+  <div class="stack">
+    <div class="card"><div class="card-head"><h3>Mentors for you</h3></div>
+      {% if mentor_suggestions %}<table class="tbl"><tbody>{% for s in mentor_suggestions %}<tr><td><strong>{{ s.skill }}</strong><br>{% for m in s.mentors %}<a href="{% url 'person' m.user.pk %}">{{ m.user.get_full_name|default:m.user.username }}</a> <small class="muted">{{ m.combined_level }}/5</small>{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>{% endfor %}</tbody></table>
+      {% else %}<div class="card-body muted">Mark a skill as “learning” on <a href="{% url 'my_profile' %}">your profile</a> and colleagues who hold it appear here.</div>{% endif %}</div>
+    <div class="card"><div class="card-body"><h3>How ratings work</h3><p class="muted">You rate yourself on each skill (Aware → Recognised authority). Colleagues endorse you with a level and must say where they saw the skill in action. One endorsement per person per skill, never on yourself. The combined level is the average of your rating and all endorsements, so a self-rating alone never outranks peers.</p></div></div>
+  </div>
+</div>
+{% endblock %}

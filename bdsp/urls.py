@@ -14,6 +14,10 @@ urlpatterns = [
     path("schedule/", include("scheduling.urls")),
     path("projects/", include("projects.urls")),
     path("actuals/", include("timesheets.urls")),
+    path("tags/", include("tags.urls")),
+    path("community/", include("community.urls")),
+    path("calcs/", include("calcs.urls")),
+    path("files/", include("files.urls")),
 ]
 
 if settings.DEBUG:

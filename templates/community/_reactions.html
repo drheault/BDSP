@@ -1,0 +1,4 @@
+<span class="reactions" id="react-{{ ct.pk }}-{{ obj.pk }}">
+  <button class="btn btn-xs {% if mine == 1 %}btn-primary{% endif %}" title="Useful" hx-post="{% url 'react' ct.pk obj.pk 'up' %}" hx-target="#react-{{ ct.pk }}-{{ obj.pk }}" hx-swap="outerHTML">▲ {{ reaction.up }}</button>
+  <button class="btn btn-xs {% if mine == -1 %}btn-danger{% endif %}" title="Not useful" hx-post="{% url 'react' ct.pk obj.pk 'down' %}" hx-target="#react-{{ ct.pk }}-{{ obj.pk }}" hx-swap="outerHTML">▼ {{ reaction.down }}</button>
+</span>

@@ -7,8 +7,11 @@
 <form method="post" id="theme-form">{% csrf_token %}
 <div class="grid grid-3">
   <div class="span-2 stack">
-    <div class="card"><div class="card-body"><div class="form-grid">{% include "includes/field.html" with field=form.name %}{% include "includes/field.html" with field=form.description %}</div></div></div>
-    <div class="card"><div class="card-head"><h3>Variables</h3><span class="muted">Colours as #hex; font as a CSS font-family list; sizes with units.</span></div><div class="card-body"><div class="form-grid">
+    <div class="card"><div class="card-body"><div class="form-grid">{% include "includes/field.html" with field=form.name %}{% include "includes/field.html" with field=form.description %}{% include "includes/field.html" with field=form.default_mode %}</div></div></div>
+    <div class="card"><div class="card-head"><h3>Dark mode colours</h3><span class="muted">used when the page is in dark mode (the default here)</span></div><div class="card-body"><div class="form-grid">
+      {% for f in form.dark_fields %}<div class="field"><label for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}</div>{% endfor %}
+    </div></div></div>
+    <div class="card"><div class="card-head"><h3>Light mode colours &amp; type</h3><span class="muted">Colours as #hex; font as a CSS font-family list; sizes with units.</span></div><div class="card-body"><div class="form-grid">
       {% for f in form.var_fields %}<div class="field"><label for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}</div>{% endfor %}
     </div></div></div>
     <div class="card"><div class="card-head"><h3>Custom CSS</h3><span class="muted">Appended after the variables — for anything the variables don't cover.</span></div><div class="card-body">{{ form.custom_css }}</div></div>
@@ -27,8 +30,8 @@
 <script>
 (function(){
   var form=document.getElementById("theme-form"), style=document.getElementById("preview-css"), themeStyle=document.getElementById("theme-css");
-  function apply(){ var decl=[]; form.querySelectorAll("[name^='var_']").forEach(function(i){ if(i.value) decl.push("--"+i.name.slice(4)+":"+i.value); });
-    style.textContent=":root{"+decl.join(";")+"}\n"+(form.querySelector("[name=custom_css]").value||""); if(themeStyle) themeStyle.disabled=true; }
+  function apply(){ var decl=[], dark=[]; form.querySelectorAll("[name^='var_']").forEach(function(i){ if(i.value) decl.push("--"+i.name.slice(4)+":"+i.value); }); form.querySelectorAll("[name^='dark_']").forEach(function(i){ if(i.value) dark.push("--"+i.name.slice(5)+":"+i.value); });
+    style.textContent=":root{"+decl.join(";")+"}\n:root[data-mode=dark]{"+decl.join(";")+";"+dark.join(";")+"}\n"+(form.querySelector("[name=custom_css]").value||""); if(themeStyle) themeStyle.disabled=true; }
   form.addEventListener("input", apply); apply();
 })();
 </script>

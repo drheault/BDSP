@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}File server{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>File server</h1><div class="sub">Browse, upload and download on the project shares when you are on the office network or VPN. Index a project folder to turn its files into records.</div></div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-head"><h3>Shares</h3></div>
+      <table class="tbl"><thead><tr><th>Name</th><th>Path</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for r, ok in roots %}<tr><td><strong>{{ r.name }}</strong><br><small class="muted">{{ r.get_kind_display }}</small></td><td class="mono" style="word-break:break-all">{{ r.path }}</td><td>{% if ok %}<span class="badge badge-won">reachable</span>{% else %}<span class="badge badge-lost">not reachable</span> <small class="muted">mount the share or connect to VPN</small>{% endif %}</td><td class="row-actions"><a class="btn btn-sm" href="{% url 'file_browse' r.pk '' %}">{% include "includes/icons.html" with name="folder" %} Browse</a></td></tr>
+      {% empty %}<tr><td colspan="4"><div class="empty"><strong>No shares configured</strong>Add the project share on the right (an IT or integrations role).</div></td></tr>{% endfor %}</tbody></table></div>
+    <div class="card"><div class="card-head"><h3>Recent syncs</h3></div><table class="tbl"><tbody>{% for l in logs %}<tr><td>{{ l.started_at|date:"j M Y H:i" }} · {{ l.root.name }}{% if l.proposal %} · <a href="{% url 'proposal_records' l.proposal.pk %}">{{ l.proposal.project_number|default:l.proposal.number }}</a>{% endif %}<br><small class="muted">{{ l.message }}</small></td></tr>{% empty %}<tr><td class="muted">No syncs yet. Open a project's Files tab and choose “Index project folder”.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="stack">
+    {% if can.manage_integrations %}
+    <div class="card"><div class="card-body"><h3>Add or edit a share</h3>
+      <p class="muted">Recommended on the LAN: mount the SMB share on the server (e.g. <code>/mnt/projects</code> or a mapped drive) and use “Mounted folder”. “SMB share” connects with stored credentials through the smbprotocol client.</p>
+      <form method="post" action="{% url 'file_root_save' %}" class="stack">{% csrf_token %}{% include "includes/form.html" with full_fields=",path,project_folder_template," %}<button class="btn btn-primary">Save share</button></form>
+      {% if all_roots %}<table class="tbl mt"><tbody>{% for r in all_roots %}<tr><td>{{ r.name }}{% if not r.is_active %} <span class="badge">inactive</span>{% endif %}</td><td class="row-actions"><form method="post" action="{% url 'file_root_delete' r.pk %}" data-confirm="Remove {{ r.name }}?">{% csrf_token %}<button class="btn btn-xs btn-danger">×</button></form></td></tr>{% endfor %}</tbody></table>{% endif %}
+    </div></div>{% endif %}
+    <div class="card"><div class="card-body"><h3>What “sync” does</h3><p class="muted">Indexing a project folder lists every file under it and creates a record per file (site visit reports, photos, monitoring, progress) based on the sub-folder name, without copying the data. The files stay on the share; the app keeps the path, date and type so they can be searched, tagged and pulled into proposals and estimates.</p></div></div>
+  </div>
+</div>
+{% endblock %}

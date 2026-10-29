@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from .export import build_sheet_pdf
 from .forms import ImageCaptionForm, ImageUploadForm, PastProjectForm
 from .models import PastProject, ProjectImage
 
@@ -16,11 +17,14 @@ def project_list(request):
     q = request.GET.get("q", "").strip()
     kind = request.GET.get("kind", "")
     projects = PastProject.objects.prefetch_related("images").select_related("client")
+    tag = request.GET.get("tag", "")
+    if tag:
+        projects = projects.filter(tagged__tag__slug=tag)
     if q:
         projects = projects.filter(Q(name__icontains=q) | Q(client_name__icontains=q) | Q(client__name__icontains=q) | Q(location__icontains=q))
     if kind:
         projects = projects.filter(kind=kind)
-    ctx = {"projects": projects, "q": q, "kind": kind, "kinds": PastProject.Kind.choices}
+    ctx = {"projects": projects.distinct(), "q": q, "kind": kind, "kinds": PastProject.Kind.choices, "tag": tag}
     if request.htmx:
         return render(request, "projects/_project_grid.html", ctx)
     return render(request, "projects/project_list.html", ctx)
@@ -117,3 +121,18 @@ def image_cover(request, pk):
         o.order = i
         o.save(update_fields=["order"])
     return render(request, "projects/_image_gallery.html", {"project": project, "upload_form": ImageUploadForm()})
+
+
+@login_required
+def project_pdf(request, pk):
+    project = get_object_or_404(PastProject, pk=pk)
+    resp = HttpResponse(build_sheet_pdf(project), content_type="application/pdf")
+    resp["Content-Disposition"] = f'{"inline" if request.GET.get("inline") else "attachment"}; filename="project-sheet-{project.pk}.pdf"'
+    return resp
+
+
+@login_required
+def project_preview(request, pk):
+    """htmx: compact preview card used when choosing attachments."""
+    project = get_object_or_404(PastProject.objects.prefetch_related("images", "services"), pk=pk)
+    return render(request, "projects/_preview.html", {"project": project})

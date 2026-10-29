@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load social %}
+{% block title %}My profile{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'people' %}">People</a> /</div><h1>My profile &amp; skills</h1></div><div class="actions"><a class="btn" href="{% url 'person' request.user.pk %}">View my page</a></div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-body"><form method="post" enctype="multipart/form-data">{% csrf_token %}
+      <div class="row-flex mb">{% avatar request.user 64 %}<div class="field" style="flex:1"><label>Avatar</label>{{ form.avatar }}</div></div>
+      <div class="form-grid">
+        <div class="field"><label>First name</label><input type="text" name="first_name" value="{{ request.user.first_name }}"></div><div class="field"><label>Last name</label><input type="text" name="last_name" value="{{ request.user.last_name }}"></div>
+        <div class="field"><label>Email</label><input type="email" name="email" value="{{ request.user.email }}"></div>
+        {% include "includes/field.html" with field=form.title %}{% include "includes/field.html" with field=form.office %}{% include "includes/field.html" with field=form.linkedin %}
+        {% include "includes/field.html" with field=form.bio extra_class="full" %}{% include "includes/field.html" with field=form.open_to_mentor %}{% include "includes/field.html" with field=form.looking_for_mentor %}
+      </div><div class="form-actions"><button class="btn btn-primary">Save profile</button></div></form></div></div>
+    <div class="card"><div class="card-head"><h3>My skills</h3></div>
+      <table class="tbl"><tbody>{% for us in skills %}<tr><td><strong>{{ us.skill.name }}</strong>{% if us.is_learning %} <span class="badge badge-submitted">learning</span>{% endif %}</td><td>{{ us.get_self_level_display }}</td><td class="row-actions"><form method="post" action="{% url 'skill_remove' us.pk %}">{% csrf_token %}<button class="btn btn-xs btn-ghost">{% include "includes/icons.html" with name="trash" %}</button></form></td></tr>{% empty %}<tr><td class="muted">Add the skills you have, and the ones you are working on.</td></tr>{% endfor %}</tbody></table>
+      <div class="add-bar"><form method="post" action="{% url 'skill_add' %}" class="inline-form">{% csrf_token %}<div class="field"><label>Skill</label>{{ skill_form.skill }}</div><div class="field"><label>…or new</label>{{ skill_form.new_skill }}</div><div class="field narrow" style="flex-basis:170px"><label>Level</label>{{ skill_form.self_level }}</div><div class="field check narrow">{{ skill_form.is_learning }}<label>Learning</label></div><button class="btn btn-primary btn-sm">Add</button></form></div></div>
+  </div>
+  <div class="card"><div class="card-body"><h3>Rules of the road</h3><ul class="muted" style="padding-left:1.1rem"><li>Rate yourself honestly; peers see it.</li><li>Endorsements need a concrete context.</li><li>“Learning” skills put you in front of mentors who hold them.</li><li>Partners can see the whole skills map in Metrics.</li></ul></div></div>
+</div>
+{% endblock %}

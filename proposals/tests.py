@@ -217,3 +217,66 @@ class ProposalViewTests(TestCase):
         self.assertEqual(e.initials, "BR")
         self.client.post(reverse("employee_delete", args=[e.pk]), HTTP_HX_REQUEST="true")
         self.assertFalse(Employee.objects.filter(pk=e.pk).exists())
+
+
+class AttachmentAndExportTests(TestCase):
+    def setUp(self):
+        _currencies()
+        self.user = _superuser_like(get_user_model().objects.create_user("u", password="p"))
+        self.client.force_login(self.user)
+        from projects.models import PastProject
+        from tags.models import Tag, TagCategory
+
+        cat = TagCategory.objects.create(name="Method", weight=1.5)
+        self.p = Proposal.objects.create(title="Twin tunnel final design", summary="EPB TBM running tunnels in glacial till", closing_words="Thank you {{client_name}}")
+        self.p.set_tags(["TBM – EPB", "Running tunnel"])
+        self.good = PastProject.objects.create(name="Riverside tunnels", kind="tunnel", description="EPB TBM tunnels in glacial till", is_published=True)
+        self.good.set_tags(["TBM – EPB", "Running tunnel"])
+        self.bad = PastProject.objects.create(name="Pump cavern", kind="cavern", description="Drill and blast cavern", is_published=True)
+        self.draft = PastProject.objects.create(name="Draft sheet", kind="tunnel", is_published=False)
+
+    def test_relevance_ordering_and_toggle(self):
+        sugg = self.p.suggested_sheets(limit=0)
+        self.assertEqual([s["sheet"] for s in sugg][:2], [self.good, self.bad])
+        self.assertGreater(sugg[0]["score"], sugg[1]["score"])
+        self.assertNotIn(self.draft, [s["sheet"] for s in sugg])
+        r = self.client.post(reverse("attachment_toggle", args=[self.p.pk, self.good.pk]), HTTP_HX_REQUEST="true")
+        self.assertContains(r, "checked")
+        self.assertEqual(self.p.attachments.count(), 1)
+        self.assertEqual(self.client.get(reverse("proposal_attachments", args=[self.p.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("project_preview", args=[self.good.pk])).status_code, 200)
+        self.client.post(reverse("attachment_toggle", args=[self.p.pk, self.good.pk]), HTTP_HX_REQUEST="true")
+        self.assertEqual(self.p.attachments.count(), 0)
+
+    def test_export_with_attachments(self):
+        from proposals.models import ProposalAttachment
+
+        ProposalAttachment.objects.create(proposal=self.p, project=self.good, kind="sheet")
+        pdf = self.client.get(reverse("proposal_export", args=[self.p.pk, "pdf"]))
+        self.assertTrue(pdf.content.startswith(b"%PDF"))
+        from pypdf import PdfReader
+        from io import BytesIO
+
+        text = "".join(pg.extract_text() for pg in PdfReader(BytesIO(pdf.content)).pages)
+        self.assertIn("Fee summary", text)
+        self.assertIn("Terms", text)
+        self.assertIn("Riverside tunnels", text)
+        self.assertIn("Capabilities", text)
+        docx = self.client.get(reverse("proposal_export", args=[self.p.pk, "docx"]))
+        self.assertTrue(docx.content.startswith(b"PK"))
+        self.assertEqual(self.client.get(reverse("project_pdf", args=[self.good.pk])).status_code, 200)
+
+    def test_form_builder_hides_and_adds_fields(self):
+        from core.models import CustomField, FieldRule
+
+        FieldRule.objects.create(form_key="proposal", field_name="probability", visible=False)
+        CustomField.objects.create(form_key="proposal", key="procurement", label="Procurement route", type="choice", choices="DBB, DB, P3", show_in_export=True)
+        r = self.client.get(reverse("proposal_detail", args=[self.p.pk]))
+        self.assertNotContains(r, 'name="probability"')
+        self.assertContains(r, 'name="cf_procurement"')
+        r = self.client.post(reverse("proposal_detail", args=[self.p.pk]), {"title": "T", "service_type": "design", "status": "lead", "contingency_percent": 0, "cf_procurement": "P3", "closing_words": "x", "tags": "a, b"})
+        self.assertEqual(r.status_code, 302)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.extra["procurement"], "P3")
+        self.assertEqual({t.name for t in self.p.tags}, {"a", "b"})
+        self.assertEqual(self.client.get(reverse("form_builder", args=["proposal"])).status_code, 200)

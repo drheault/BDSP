@@ -1,0 +1,3 @@
+<div class="card thread" id="thread-{{ ct.pk }}-{{ obj.pk }}" hx-get="{% url 'thread' ct.pk obj.pk %}" hx-trigger="load" hx-swap="innerHTML">
+  <div class="card-head"><h3>{{ title }} <span class="count-pill">{{ n }}</span></h3></div><div class="card-body muted">Loading…</div>
+</div>

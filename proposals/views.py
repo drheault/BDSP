@@ -11,6 +11,7 @@ from core.permissions import has_cap, require_cap
 from crm.models import Contact
 
 from .forms import (
+    AttachmentFileForm,
     EmployeeForm,
     FeeItemForm,
     FeeLineForm,
@@ -31,6 +32,7 @@ from .models import (
     PhaseChange,
     ProjectRecord,
     Proposal,
+    ProposalAttachment,
     ProposalSection,
     ProposalTemplate,
     Service,
@@ -573,6 +575,89 @@ def item_apply_suggestion(request, pk):
             l.unit_cost = proposal.cur.from_base(src.proposal.cur.to_base(l.unit_cost))
         l.save()
     return _fee_panel(request, proposal)
+
+
+# =============================================================================
+# Attachments: project sheets (with relevance), files, calculations
+# =============================================================================
+@login_required
+def proposal_attachments(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    ctx = _proposal_ctx(proposal, "attachments")
+    q = request.GET.get("q", "").strip()
+    suggestions = proposal.suggested_sheets(limit=0)
+    if q:
+        suggestions = [s for s in suggestions if q.lower() in s["sheet"].searchable_text.lower()]
+    ctx.update({"suggestions": suggestions[:40], "q": q, "attachments": proposal.attachments.select_related("project", "calc_run"), "file_form": AttachmentFileForm(),
+                "calc_runs": proposal.calc_runs.select_related("tool")})
+    return render(request, "proposals/proposal_attachments.html", ctx)
+
+
+@login_required
+@require_cap("edit_proposals")
+@require_POST
+def attachment_toggle(request, pk, project_pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    from projects.models import PastProject
+
+    sheet = get_object_or_404(PastProject, pk=project_pk, is_published=True)
+    att = proposal.attachments.filter(project=sheet).first()
+    if att:
+        att.delete()
+        attached = False
+    else:
+        ProposalAttachment.objects.create(proposal=proposal, kind="sheet", project=sheet, order=proposal.attachments.count())
+        attached = True
+    score, reasons = sheet.relevance_for(proposal)
+    return render(request, "proposals/_sheet_row.html", {"proposal": proposal, "s": {"sheet": sheet, "score": score, "reasons": reasons, "attached": attached}})
+
+
+@login_required
+@require_cap("edit_proposals")
+@require_POST
+def attachment_add_file(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    form = AttachmentFileForm(request.POST, request.FILES)
+    if form.is_valid():
+        a = form.save(commit=False)
+        a.proposal = proposal
+        a.order = proposal.attachments.count()
+        a.save()
+        messages.success(request, f"Attached “{a.display_title}”.")
+    else:
+        messages.error(request, form.errors.as_text())
+    return redirect("proposal_attachments", pk=pk)
+
+
+@login_required
+@require_cap("edit_proposals")
+@require_POST
+def attachment_add_calc(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    from calcs.models import CalcRun
+
+    run = get_object_or_404(CalcRun, pk=request.POST.get("run"))
+    ProposalAttachment.objects.get_or_create(proposal=proposal, calc_run=run, defaults={"kind": "calc", "order": proposal.attachments.count()})
+    return redirect("proposal_attachments", pk=pk)
+
+
+@login_required
+@require_cap("edit_proposals")
+@require_POST
+def attachment_remove(request, pk):
+    a = get_object_or_404(ProposalAttachment, pk=pk)
+    pid = a.proposal_id
+    a.delete()
+    return redirect("proposal_attachments", pk=pid)
+
+
+@login_required
+@require_cap("edit_proposals")
+@require_POST
+def attachment_move(request, pk, direction):
+    a = get_object_or_404(ProposalAttachment, pk=pk)
+    move_item(a, direction, a.proposal.attachments.all())
+    return redirect("proposal_attachments", pk=a.proposal_id)
 
 
 # =============================================================================

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AccessRole, CompanyProfile, Currency, Region, Theme
+from .models import AccessRole, CompanyProfile, CustomField, Currency, FieldRule, Region, Theme
 
 
 @admin.register(CompanyProfile)
@@ -30,3 +30,15 @@ class AccessRoleAdmin(admin.ModelAdmin):
 @admin.register(Theme)
 class ThemeAdmin(admin.ModelAdmin):
     list_display = ("name", "based_on", "is_active", "updated_at")
+
+
+@admin.register(FieldRule)
+class FieldRuleAdmin(admin.ModelAdmin):
+    list_display = ("form_key", "field_name", "visible", "required", "label", "order")
+    list_filter = ("form_key",)
+
+
+@admin.register(CustomField)
+class CustomFieldAdmin(admin.ModelAdmin):
+    list_display = ("form_key", "key", "label", "type", "required", "is_active")
+    list_filter = ("form_key",)

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ tag.name }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="crumbs"><a href="{% url 'tag_index' %}">Tags</a> / {{ tag.category.name }}</div><h1><span class="dot" style="background:{{ tag.category.color }}"></span>{{ tag.name }}</h1>{% if tag.description %}<div class="sub">{{ tag.description }}</div>{% endif %}{% if tag.aliases %}<div class="muted">Also: {{ tag.aliases }}</div>{% endif %}</div>
+<div class="actions">{% if can.manage_settings %}<details class="menu"><summary class="btn btn-icon">{% include "includes/icons.html" with name="dots" %}</summary><div class="menu-items"><form method="post" action="{% url 'tag_delete' tag.pk %}" data-confirm="Delete tag {{ tag.name }}? Items keep their other tags.">{% csrf_token %}<button class="danger">{% include "includes/icons.html" with name="trash" %} Delete tag</button></form></div></details>{% endif %}</div></div>
+<div class="grid grid-2">
+{% for label, objs in groups.items %}
+  <div class="card"><div class="card-head"><h3>{{ label }}</h3><span class="muted">{{ objs|length }}</span></div>
+    <table class="tbl"><tbody>{% for o in objs %}<tr><td>{% if o.get_absolute_url %}<a href="{{ o.get_absolute_url }}">{{ o }}</a>{% else %}{{ o }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% empty %}<div class="card"><div class="empty"><strong>Nothing tagged yet</strong>Add “{{ tag.name }}” to a project sheet, service, proposal or tool.</div></div>{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% load tagchips humanize %}
+<div class="sheet-preview">
+  {% if project.cover %}<img src="{{ project.cover.image.url }}" alt="">{% endif %}
+  <div><strong>{{ project.name }}</strong><div class="muted">{{ project.display_client }}{% if project.location %} · {{ project.location }}{% endif %}{% if project.year_completed %} · {{ project.year_completed }}{% endif %}</div>
+  <p class="muted" style="margin:.3rem 0">{{ project.description|truncatechars:220 }}</p>
+  {% if project.services.exists %}<div class="muted"><small>{% for s in project.services.all|slice:":4" %}{{ s.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</small></div>{% endif %}
+  {% tag_chips project True %}
+  <div class="row-flex mt-sm"><a class="btn btn-xs" href="{% url 'project_detail' project.pk %}" target="_blank">Open sheet</a><a class="btn btn-xs" href="{% url 'project_pdf' project.pk %}?inline=1" target="_blank">PDF</a></div></div>
+</div>

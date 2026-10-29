@@ -3,7 +3,13 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    path("", views.landing, name="dashboard"),
+    path("settings/forms/", views.form_builder, name="form_builder_home"),
+    path("settings/forms/<str:form_key>/", views.form_builder, name="form_builder"),
+    path("settings/forms/<str:form_key>/save/", views.form_builder_save, name="form_builder_save"),
+    path("settings/forms/<str:form_key>/reset/", views.form_builder_reset, name="form_builder_reset"),
+    path("settings/custom-fields/save/", views.custom_field_save, name="custom_field_save"),
+    path("settings/custom-fields/<int:pk>/delete/", views.custom_field_delete, name="custom_field_delete"),
     path("settings/", views.company_settings, name="company_settings"),
     path("settings/currencies/add/", views.currency_add, name="currency_add"),
     path("settings/currencies/<int:pk>/edit/", views.currency_edit, name="currency_edit"),

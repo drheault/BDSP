@@ -46,7 +46,15 @@ the production variables.
 | **Project numbers & phases** | `B-ON601` in business development → `601C` consulting → `601D` design development → `601E` execution. Region codes (2-letter province/state, 3-letter country) and the sequence counter are managed in settings; the number is assigned once and the letter changes with the phase. Required before a proposal can be marked won; every change is logged |
 | **Records & files** | Per project: the file-server folder path (from a template) and a register of site-visit reports, photo dumps, monitoring data and progress rates with their SMB paths. Progress rates are averaged to feed future estimates |
 | **Roles & users** | Partners, Associates, Engineers, HR-Global, HR-Local, IT, Admins seeded; create, edit or delete roles and tick capabilities (see costs, approve won, change phase, manage settings…). Pages, buttons and columns follow the capabilities |
-| **Appearance** | Four built-in styles (Classic navy, Light & airy, Engineering slate, Large & high contrast). Apply one for all users, copy and customise colours/fonts with a live preview, add custom CSS, import/export themes as JSON. Per-user text-size control in the account menu |
+| **Project sheets v2** | Services provided, cost, duration, description, challenges, our contribution, value added, highlights, reference, file-server source path, tags. One-page PDF with a fixed template. Comments and "used in proposals" |
+| **Attachments** | Per proposal: project sheets ranked by relevance (shared tags weighted by category, services, client/sector, structure type, keywords) with checkboxes and previews; files (PDFs merge into the export); saved calculations. Standard attachments: fee breakdown, schedule, terms & validity, capabilities |
+| **Document structure** | Main body = cover, project description, your sections, fee summary, closing words, signature, validity line. Attachments follow in order |
+| **Calculations** | Six built-in tools with formulas shown: tunnel face stability, settlement & building damage, beam analysis, RC section, M–N capacity curves, fibre-reinforced shotcrete. Save runs against proposals; upload your own tools; likes, ratings and discussion rank them |
+| **Tags** | One vocabulary for services, project sheets, proposals, records, tools and skills, organised in weighted categories with aliases for auto-tagging |
+| **People & skills** | Profiles with avatars, self-rated skills, peer endorsements with context, mentor suggestions and mentoring requests; comments and likes on anything |
+| **File server** | Browse, upload and download on mounted or SMB shares; index a project folder into records |
+| **Form builder** | Hide, require, relabel and reorder inputs on each form; add custom fields (text, number, date, yes/no, choice) that print on documents |
+| **Appearance** | Four built-in styles, each with dark and light palettes (dark by default; users switch in their account menu); Engineering slate carries the Dr. Sauer anthracite-and-gold palette. Collapsible, resizable sidebar. Apply one for all users, copy and customise colours/fonts with a live preview, add custom CSS, import/export themes as JSON. Per-user text-size control in the account menu |
 | **Integrations** | Office Timesheets sync: watched export folder or HTTP endpoint, phase filter, duplicate protection, run history, "Sync now" and a schedulable command. HCL Notes placeholder |
 | **Suggestions** | While naming a work item, similar items from won projects appear with their estimated and booked hours; one click creates the item re-priced at current rates |
 | **Actuals** | Per won project: estimate vs. booked hours and cost by work item and by person; manual time entries; CSV import (Office Timesheets export format) |
@@ -107,6 +115,13 @@ htmx is loaded from unpkg; to self-host, drop `htmx.min.js` into `static/js/`
 2. **Adopt**: staff book time directly in BDSP against work items.
 3. **Replace**: retire the connector.
 
+## Where legal text goes
+
+The validity sentence is printed in the main body right under the fee summary,
+because it is the line a client reads. The full terms (basis, invoicing,
+liability, confidentiality) are an attachment so they never crowd the
+narrative. Both come from *Company settings → Proposal documents*.
+
 ## Interface principles
 
 Large readable type, high contrast, few visible controls. Secondary actions
@@ -139,6 +154,12 @@ Environment variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG` (`1`/`0`),
 ```bash
 python manage.py test
 ```
+
+## Public site
+
+`/` is a landing page for tunnelvision.ca when signed out and the dashboard
+when signed in. Set `DJANGO_ALLOWED_HOSTS=tunnelvision.ca,www.tunnelvision.ca`
+and `DJANGO_CSRF_TRUSTED_ORIGINS=https://tunnelvision.ca` for deployment.
 
 ## Roadmap (designed for, not built yet)
 

@@ -1,0 +1,14 @@
+{% load social %}
+<div class="card-head"><h3>Comments <span class="count-pill">{{ comments|length }}</span></h3>{% include "community/_reactions.html" %}</div>
+<div class="card-body stack">
+  {% for c in comments %}
+  <div class="comment" id="c-{{ c.pk }}">
+    <div class="comment-head">{% avatar c.author 28 %}<strong><a href="{% url 'person' c.author.pk %}">{{ c.author.get_full_name|default:c.author.username }}</a></strong><span class="muted">{{ c.created_at|date:"j M Y H:i" }}</span>
+      {% if c.author == request.user or request.user.is_superuser %}<button class="btn btn-xs btn-ghost" hx-post="{% url 'comment_delete' c.pk %}" hx-confirm="Delete comment?" hx-target="#thread-{{ ct.pk }}-{{ obj.pk }}">{% include "includes/icons.html" with name="trash" %}</button>{% endif %}</div>
+    <div class="comment-body">{{ c.body|linebreaksbr }}</div>
+    {% for r in c.replies.all %}<div class="comment reply"><div class="comment-head">{% avatar r.author 22 %}<strong>{{ r.author.get_full_name|default:r.author.username }}</strong><span class="muted">{{ r.created_at|date:"j M H:i" }}</span></div><div class="comment-body">{{ r.body|linebreaksbr }}</div></div>{% endfor %}
+    <details class="reveal"><summary><span class="btn btn-xs btn-ghost">Reply</span></summary><form class="row-flex reveal-body" hx-post="{% url 'comment_add' ct.pk obj.pk %}" hx-target="#thread-{{ ct.pk }}-{{ obj.pk }}"><input type="hidden" name="parent" value="{{ c.pk }}"><input type="text" name="body" required placeholder="Reply…"><button class="btn btn-sm">Send</button></form></details>
+  </div>
+  {% empty %}<p class="muted">No comments yet. Questions, review notes and ideas go here; nothing in this thread is printed.</p>{% endfor %}
+  <form class="row-flex" hx-post="{% url 'comment_add' ct.pk obj.pk %}" hx-target="#thread-{{ ct.pk }}-{{ obj.pk }}">{% avatar request.user 28 %}{{ form.body }}<button class="btn btn-primary btn-sm">Comment</button></form>
+</div>

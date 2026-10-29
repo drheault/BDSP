@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Tags{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Tags</h1><div class="sub">One vocabulary for services, project sheets, proposals, records, tools and skills. {{ total }} items tagged.</div></div>
+<div class="actions"><form class="filters" method="get" style="margin:0"><input type="search" name="q" value="{{ q }}" placeholder="Find a tag…"></form></div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+  {% for c in categories %}
+    <div class="card"><div class="card-head"><h3><span class="dot" style="background:{{ c.color }}"></span>{{ c.name }}</h3><span class="muted">weight ×{{ c.weight }} in relevance</span></div>
+      <div class="card-body"><div class="chips">{% for t in tags %}{% if t.category_id == c.pk %}<a class="chip" href="{% url 'tag_detail' t.slug %}" style="--chip:{{ c.color }}">{{ t.name }} <small>{{ t.n }}</small></a>{% endif %}{% empty %}{% endfor %}</div></div></div>
+  {% empty %}<div class="card"><div class="empty"><strong>No tag categories yet</strong>Run the seed or add a category.</div></div>{% endfor %}
+  </div>
+  <div class="stack">
+    {% if can.manage_settings %}
+    <div class="card"><div class="card-body"><h3>Add or edit a tag</h3>
+      <form method="post" action="{% url 'tag_save' %}" class="stack">{% csrf_token %}
+        <div class="field"><label>Name</label><input type="text" name="name" required></div>
+        <div class="field"><label>Category</label><select name="category">{% for c in categories %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Aliases</label><input type="text" name="aliases" placeholder="synonyms, comma separated"><div class="help">Used for auto-tagging and search.</div></div>
+        <button class="btn btn-primary">Save tag</button></form></div></div>
+    <div class="card"><div class="card-body"><h3>New category</h3>
+      <form method="post" action="{% url 'tag_category_save' %}" class="stack">{% csrf_token %}
+        <div class="field"><label>Name</label><input type="text" name="name" required placeholder="e.g. Ground conditions"></div>
+        <div class="row-flex"><div class="field"><label>Colour</label><input type="color" name="color" value="#6b7f99"></div><div class="field"><label>Relevance weight</label><input type="number" name="weight" step="0.25" value="1" min="0"></div></div>
+        <button class="btn">Add category</button></form></div></div>
+    {% endif %}
+    <div class="card"><div class="card-body"><h3>How tagging works</h3><p class="muted">Tag anything with the same words: a service, a project sheet, a proposal, a report or drawing in the records, a calculation tool, a person's skill. Relevance scoring for project-sheet suggestions weights shared tags by category; aliases let “NATM” find “SEM”. Admins organise the vocabulary here.</p></div></div>
+  </div>
+</div>
+{% endblock %}

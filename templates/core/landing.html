@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Welcome{% endblock %}
+{% block body %}
+<div class="landing" data-mode="dark">
+  <header class="l-nav"><a class="l-brand" href="/">{% if company and company.logo %}<img src="{{ company.logo.url }}" alt="">{% else %}<img src="{% static 'img/logo-default.svg' %}" alt="">{% endif %}<span>{{ company.name }}</span></a><nav><a href="#how">How it works</a><a href="#tools">Tools</a><a class="btn btn-accent" href="{% url 'login' %}">Sign in</a></nav></header>
+  <section class="l-hero">
+    <div class="l-tunnel" aria-hidden="true">
+      <svg viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice">
+        <defs><radialGradient id="glow" cx="50%" cy="55%" r="40%"><stop offset="0" stop-color="#c9a84c" stop-opacity=".55"/><stop offset=".5" stop-color="#c9a84c" stop-opacity=".12"/><stop offset="1" stop-color="#0f1317" stop-opacity="0"/></radialGradient></defs>
+        <rect width="1200" height="520" fill="#0f1317"/><ellipse cx="600" cy="290" rx="420" ry="230" fill="url(#glow)"/>
+        <g class="rings" fill="none" stroke="#c9a84c" stroke-opacity=".55">
+          {% for r in "0123456789" %}<ellipse class="ring" cx="600" cy="290" rx="40" ry="24" style="animation-delay:-{{ r }}.8s"/>{% endfor %}
+        </g>
+        <g class="rails" stroke="#c9a84c" stroke-opacity=".25" stroke-width="2"><path d="M520 520 L590 300"/><path d="M680 520 L610 300"/></g>
+      </svg>
+    </div>
+    <div class="l-copy">
+      <div class="l-kicker">TunnelVision · Dr. Sauer &amp; Partners</div>
+      <h1>Proposals, estimates and schedules for people who build underground.</h1>
+      <p>One place for business development, fee build-ups, project sheets, timesheet actuals and the engineering tools that back them up. Tunnels, shafts and caverns, from the first lead to the record drawings.</p>
+      <div class="row-flex"><a class="btn btn-accent" href="{% url 'login' %}" style="font-size:1rem;padding:.75rem 1.3rem">Sign in</a><a class="btn btn-ghost" href="#how" style="color:#e4e8ec">See how it works</a></div>
+    </div>
+  </section>
+  <section class="l-band" id="how">
+    <div class="l-grid">
+      <div><div class="l-num">B → C → D → E</div><h3>Every project through its phases</h3><p>Business development, consulting, design development and execution carry one project number from the first call to close-out.</p></div>
+      <div><div class="l-num">Σ hours × rate</div><h3>Fees the way engineers build them</h3><p>Named people, hours and rates per drawing set, report and design task. Expenses, software and subs alongside. Actuals from timesheets close the loop.</p></div>
+      <div><div class="l-num">N = (σs + γz − σT)/cu</div><h3>Engineering tools, methods shown</h3><p>Face stability, settlement and building damage, lining capacity curves, fibre-reinforced shotcrete. Transparent formulas, rated by colleagues.</p></div>
+    </div>
+  </section>
+  <section class="l-band l-services" id="tools">
+    <h2>What we do</h2>
+    <div class="l-grid l-three">{% for s in services %}<div class="l-svc">{{ s.name }}</div>{% endfor %}</div>
+  </section>
+  <footer class="l-foot"><span>{{ company.name }} · {{ company.tagline }}</span><span>tunnelvision.ca</span></footer>
+</div>
+<style>
+.landing { background:#0f1317; color:#e4e8ec; min-height:100vh; font-family: var(--font); }
+.l-nav { display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; border-bottom:1px solid #222a33; }
+.l-brand { display:flex; align-items:center; gap:.7rem; color:#fff; font-weight:700; text-decoration:none; } .l-brand img { width:36px; height:36px; border-radius:8px; }
+.l-nav nav { display:flex; gap:1.2rem; align-items:center; } .l-nav nav a { color:#c3c9d1; text-decoration:none; }
+.l-hero { position:relative; min-height:520px; display:grid; grid-template-columns: 1.1fr 1fr; align-items:center; overflow:hidden; }
+.l-tunnel { position:absolute; inset:0; } .l-tunnel svg { width:100%; height:100%; }
+.l-copy { position:relative; grid-column:2; padding:3rem 2.5rem 3rem 1rem; max-width:620px; }
+.l-kicker { color:#c9a84c; letter-spacing:.14em; text-transform:uppercase; font-size:.78rem; font-weight:700; margin-bottom:.8rem; }
+.l-copy h1 { font-size:clamp(1.8rem,3.4vw,2.8rem); line-height:1.12; margin-bottom:1rem; color:#fff; text-wrap:balance; }
+.l-copy p { color:#c3c9d1; font-size:1.05rem; max-width:52ch; margin-bottom:1.4rem; }
+.ring { transform-origin:600px 290px; animation: ringout 8s linear infinite; }
+@keyframes ringout { 0% { transform: scale(.15); opacity:0; stroke-width:1 } 10% { opacity:1 } 100% { transform: scale(14); opacity:0; stroke-width:.2 } }
+@media (prefers-reduced-motion: reduce) { .ring { animation:none; opacity:.4; transform:scale(4) } }
+.l-band { padding:3rem 2rem; border-top:1px solid #222a33; }
+.l-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:2rem; max-width:1100px; margin:0 auto; }
+.l-num { font-family:var(--mono); color:#c9a84c; font-size:.95rem; margin-bottom:.5rem; }
+.l-band h3 { color:#fff; margin-bottom:.4rem; } .l-band p { color:#9aa4ae; }
+.l-services h2 { text-align:center; color:#fff; margin-bottom:1.5rem; }
+.l-three { grid-template-columns:repeat(3,1fr); gap:.8rem; } .l-svc { background:#1c222a; border:1px solid #2d343d; border-radius:8px; padding:.9rem 1rem; color:#e4e8ec; }
+.l-foot { display:flex; justify-content:space-between; padding:1.2rem 2rem; color:#8e97a2; border-top:1px solid #222a33; font-size:.9rem; }
+@media (max-width: 900px) { .l-hero { grid-template-columns:1fr; } .l-copy { grid-column:1; padding:2.5rem 1.5rem; } .l-grid, .l-three { grid-template-columns:1fr; } }
+</style>
+{% endblock %}

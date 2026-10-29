@@ -1,5 +1,7 @@
 from django import forms
 
+from core.formbuilder import ConfigurableFormMixin
+
 from .models import Task
 
 
@@ -7,7 +9,9 @@ class DateInput(forms.DateInput):
     input_type = "date"
 
 
-class TaskForm(forms.ModelForm):
+class TaskForm(ConfigurableFormMixin, forms.ModelForm):
+    form_key = "task"
+
     class Meta:
         model = Task
         fields = ["name", "phase", "start", "end", "is_milestone", "percent_complete", "predecessor"]
@@ -23,10 +27,13 @@ class TaskForm(forms.ModelForm):
         qs = Task.objects.filter(proposal=proposal) if proposal else Task.objects.none()
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
-        self.fields["predecessor"].queryset = qs
-        self.fields["predecessor"].required = False
-        self.fields["end"].required = False
-        self.fields["percent_complete"].required = False
+        for name, val in (("predecessor", qs), ):
+            if name in self.fields:
+                self.fields[name].queryset = val
+                self.fields[name].required = False
+        for name in ("end", "percent_complete"):
+            if name in self.fields:
+                self.fields[name].required = False
 
     def clean(self):
         data = super().clean()

@@ -34,6 +34,10 @@ INSTALLED_APPS = [
     "scheduling",
     "projects",
     "timesheets",
+    "tags",
+    "community",
+    "calcs",
+    "files",
 ]
 
 MIDDLEWARE = [

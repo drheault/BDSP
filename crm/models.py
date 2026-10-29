@@ -15,6 +15,7 @@ class Client(models.Model):
     address = models.TextField(blank=True)
     website = models.URLField(blank=True)
     notes = models.TextField(blank=True)
+    extra = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

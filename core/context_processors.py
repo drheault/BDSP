@@ -8,4 +8,4 @@ def company(request):
     except Exception:  # pragma: no cover - e.g. before migrations
         company, theme = None, None
     caps = user_capabilities(getattr(request, "user", None))
-    return {"company": company, "caps": caps, "can": {c: True for c in caps}, "theme_css": theme.css() if theme else ""}
+    return {"company": company, "caps": caps, "can": {c: True for c in caps}, "theme_css": theme.css() if theme else "", "theme_mode": theme.default_mode if theme else "dark"}

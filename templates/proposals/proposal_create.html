@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load tagchips %}
 {% block title %}New proposal{% endblock %}
 {% block content %}
 <div class="page-head"><div><div class="crumbs"><a href="{% url 'proposal_list' %}">Proposals</a> /</div><h1>New proposal</h1><div class="sub">Pick a template to start with pre-written sections; you can edit everything afterwards.</div></div></div>
@@ -20,6 +20,7 @@
     {% if can.approve_won %}{% include "includes/field.html" with field=form.assign_number %}{% endif %}
     {% include "includes/field.html" with field=form.location extra_class="full" %}
     {% include "includes/field.html" with field=form.summary extra_class="full" %}
+    {% tag_datalist_tag %}{% include "includes/field.html" with field=form.tags extra_class="full" %}
   </div>
   <div class="form-actions"><button class="btn btn-primary">Create proposal</button><a class="btn btn-ghost" href="{% url 'proposal_list' %}">Cancel</a></div>
 </form></div></div>

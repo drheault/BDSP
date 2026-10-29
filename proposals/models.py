@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from core.models import CompanyProfile, Currency, Region
 from crm.models import Client, Contact
+from tags.models import Taggable
 
 ZERO = Decimal("0")
 
@@ -20,7 +21,7 @@ class ServiceType(models.TextChoices):
     OTHER = "other", "Other / studies"
 
 
-class Service(models.Model):
+class Service(Taggable):
     """Catalogue of services the firm offers (used as scope checklists)."""
 
     name = models.CharField(max_length=200)
@@ -66,6 +67,7 @@ class Employee(models.Model):
     email = models.EmailField(blank=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="employee")
     external_id = models.CharField(max_length=60, blank=True, help_text="ID in Office Timesheets / HR system, for sync.")
+    extra = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -113,7 +115,7 @@ class TemplateSection(models.Model):
         return self.title
 
 
-class Proposal(models.Model):
+class Proposal(Taggable):
     class Status(models.TextChoices):
         LEAD = "lead", "Lead"
         DRAFTING = "drafting", "Drafting"
@@ -170,6 +172,13 @@ class Proposal(models.Model):
         max_digits=14, decimal_places=2, null=True, blank=True,
         help_text="Override the computed fee when the estimate is not built up yet.",
     )
+    closing_words = models.TextField(blank=True, default="We appreciate the opportunity to submit this proposal and would welcome the chance to discuss our approach with you.", help_text="Short closing paragraph before the signature.")
+    signatory = models.ForeignKey("Employee", on_delete=models.SET_NULL, null=True, blank=True, related_name="signed_proposals", help_text="Who signs. Defaults to the owner's employee record or the company default.")
+    include_fee_breakdown = models.BooleanField(default=True, help_text="Attach the detailed fee breakdown.")
+    include_schedule = models.BooleanField(default=True, help_text="Attach the schedule (if tasks exist).")
+    include_terms = models.BooleanField(default=True, help_text="Attach terms & validity.")
+    include_capabilities = models.BooleanField(default=True, help_text="Attach the capabilities statement and service list.")
+    extra = models.JSONField(default=dict, blank=True)
     notes = models.TextField(blank=True, help_text="Internal notes (not printed).")
     submitted_at = models.DateField(null=True, blank=True)
     decided_at = models.DateField(null=True, blank=True)
@@ -402,6 +411,38 @@ class Proposal(models.Model):
     def rendered_summary(self) -> str:
         return self.render_text(self.summary)
 
+    @property
+    def signature(self):
+        """(name, title) for the signature block."""
+        company = CompanyProfile.get_solo()
+        if self.signatory_id:
+            return self.signatory.name, self.signatory.role.title
+        if self.owner_id:
+            emp = getattr(self.owner, "employee", None)
+            if emp:
+                return emp.name, emp.role.title
+            return (self.owner.get_full_name() or self.owner.username), company.signature_title
+        return company.signature_name or company.name, company.signature_title
+
+    @property
+    def validity_line(self):
+        terms = CompanyProfile.get_solo().proposal_terms or ""
+        for line in terms.splitlines():
+            if line.lower().startswith("validity"):
+                return line.split(":", 1)[-1].strip()
+        return ""
+
+    def suggested_sheets(self, limit=12):
+        from projects.models import PastProject
+
+        attached = set(self.attachments.filter(project__isnull=False).values_list("project_id", flat=True))
+        scored = []
+        for sheet in PastProject.objects.filter(is_published=True).prefetch_related("services", "client"):
+            score, reasons = sheet.relevance_for(self)
+            scored.append({"sheet": sheet, "score": score, "reasons": reasons, "attached": sheet.pk in attached})
+        scored.sort(key=lambda r: (-r["attached"], -r["score"], r["sheet"].name))
+        return scored[:limit] if limit else scored
+
     def apply_template(self, template: ProposalTemplate):
         start = self.sections.count()
         for i, s in enumerate(template.sections.all()):
@@ -426,7 +467,7 @@ class PhaseChange(models.Model):
         return f"{self.proposal.number} → {self.phase} ({self.at:%Y-%m-%d})"
 
 
-class ProjectRecord(models.Model):
+class ProjectRecord(Taggable):
     """Execution-phase records that live on the file server: site visit reports,
     photo dumps, instrumentation data, progress rates. Registering them here
     (with their SMB path) is the first step toward mining them for predictions."""
@@ -456,6 +497,40 @@ class ProjectRecord(models.Model):
 
     def __str__(self):
         return f"{self.date} {self.title}"
+
+
+class ProposalAttachment(models.Model):
+    """Appendices after the main body: project sheets, drawings, calculations, other files."""
+
+    class Kind(models.TextChoices):
+        PROJECT_SHEET = "sheet", "Project sheet"
+        DRAWING = "drawing", "Drawing"
+        CALC = "calc", "Calculation"
+        FILE = "file", "Other document"
+
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, related_name="attachments")
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.PROJECT_SHEET)
+    project = models.ForeignKey("projects.PastProject", on_delete=models.CASCADE, null=True, blank=True, related_name="attached_to")
+    calc_run = models.ForeignKey("calcs.CalcRun", on_delete=models.CASCADE, null=True, blank=True)
+    file = models.FileField(upload_to="attachments/", blank=True, null=True, help_text="PDF or image appended to the export.")
+    title = models.CharField(max_length=200, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+        unique_together = [("proposal", "project")]
+
+    def __str__(self):
+        return self.display_title
+
+    @property
+    def display_title(self):
+        if self.project_id:
+            return self.project.name
+        if self.calc_run_id:
+            return self.calc_run.title
+        return self.title or (self.file.name.rsplit("/", 1)[-1] if self.file else self.get_kind_display())
 
 
 class ProposalSection(models.Model):
