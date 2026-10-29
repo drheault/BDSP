@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Roles & permissions{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Roles &amp; permissions</h1><div class="sub">Hierarchy of access roles. A user's capabilities are the union of their roles; superusers have everything.</div></div>
+<div class="actions"><a class="btn" href="{% url 'users' %}">Users</a><a class="btn btn-primary" href="{% url 'role_create' %}">+ New role</a></div></div>
+<div class="card table-wrap"><table class="tbl"><thead><tr><th>Rank</th><th>Role</th><th>Capabilities</th><th>Members</th><th></th></tr></thead><tbody>
+{% for r in roles %}<tr><td class="mono">{{ r.rank }}</td><td><strong>{{ r.name }}</strong>{% if r.is_system %} <span class="badge">seeded</span>{% endif %}{% if r.description %}<br><small>{{ r.description }}</small>{% endif %}</td>
+<td><div class="row-flex" style="gap:.25rem">{% for c in r.capability_labels %}<span class="badge badge-design" style="font-weight:500">{{ c }}</span>{% empty %}<span class="muted">none</span>{% endfor %}</div></td>
+<td>{% for u in r.users.all %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">—</span>{% endfor %}</td>
+<td class="row-actions"><a class="btn btn-xs" href="{% url 'role_edit' r.pk %}">Edit</a>{% if not r.is_system %}<form method="post" action="{% url 'role_delete' r.pk %}" style="display:inline" data-confirm="Delete role {{ r.name }}?">{% csrf_token %}<button class="btn btn-xs btn-danger">×</button></form>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="5"><div class="empty"><strong>No roles yet</strong>Run the seed or create a role.</div></td></tr>{% endfor %}
+</tbody></table></div>
+<div class="card mt"><div class="card-body"><h3>Capabilities</h3><div class="kv">{% for k, v in capabilities %}<span class="k mono">{{ k }}</span><span>{{ v }}</span>{% endfor %}</div></div></div>
+{% endblock %}

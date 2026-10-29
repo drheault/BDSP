@@ -22,7 +22,7 @@ def _png():
 @override_settings(MEDIA_ROOT=MEDIA)
 class ProjectTests(TestCase):
     def setUp(self):
-        self.client.force_login(get_user_model().objects.create_user("u", password="p"))
+        self.client.force_login(get_user_model().objects.create_superuser("u", "u@x.com", "p"))
 
     def test_create_upload_cover_delete(self):
         r = self.client.post(reverse("project_create"), {"name": "Riverside", "kind": "tunnel", "client_name": "Metro", "highlights": "a\nb"})

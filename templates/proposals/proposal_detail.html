@@ -8,7 +8,7 @@
     {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     <div class="form-grid">
       {% include "includes/field.html" with field=form.title extra_class="full" %}
-      {% include "includes/field.html" with field=form.project_number %}
+      {% include "includes/field.html" with field=form.region %}
       {% include "includes/field.html" with field=form.currency %}
       <div class="field"><label for="{{ form.client.id_for_label }}">Client</label>
         <select name="client" id="{{ form.client.id_for_label }}" hx-get="{% url 'contact_options' %}" hx-target="#{{ form.contact.id_for_label }}" hx-trigger="change" hx-include="this">
@@ -32,9 +32,22 @@
       {% include "includes/field.html" with field=form.decided_at %}
       {% include "includes/field.html" with field=form.manual_value %}
     </div>
-    <div class="form-actions"><button class="btn btn-primary">Save changes</button></div>
+    {% if can.edit_proposals %}<div class="form-actions"><button class="btn btn-primary">Save changes</button></div>{% endif %}
   </div></div>
   <div class="stack">
+    <div class="card"><div class="card-body">
+      <h3>Project number &amp; phase</h3>
+      {% if proposal.project_number %}
+        <div style="font-size:1.5rem;font-weight:700" class="mono">{{ proposal.project_number }}</div>
+        <div class="muted">Phase {{ proposal.phase }} — {{ proposal.phase_name }} · region {{ proposal.region.code }} · sequence {{ proposal.sequence }}</div>
+        {% if can.change_phase %}<div class="row-flex mt-sm">{% for k, v in phases %}{% if k != proposal.phase %}<form method="post" action="{% url 'change_phase' proposal.pk %}" data-confirm="Move to phase {{ k }}? The project number becomes {{ v }}."><input type="hidden" name="phase" value="{{ k }}">{% csrf_token %}<button class="btn btn-xs" title="{{ v }}">→ {{ k }}</button></form>{% endif %}{% endfor %}</div>{% endif %}
+        {% if proposal.smb_path %}<div class="mt-sm"><a class="btn btn-xs" href="{% url 'proposal_records' proposal.pk %}">Project folder &amp; records</a></div>{% endif %}
+      {% else %}
+        <p class="muted">No project number yet. Next sequence: <strong>{{ next_sequence }}</strong>.</p>
+        {% if can.approve_won %}<form method="post" action="{% url 'assign_number' proposal.pk %}" class="inline-form">{% csrf_token %}<div class="field"><label>Region</label><select name="region">{% for r in regions %}<option value="{{ r.pk }}" {% if r.pk == proposal.region_id %}selected{% endif %}>{{ r.code }} — {{ r.name }}</option>{% endfor %}</select></div><button class="btn btn-accent btn-sm">Assign number</button></form>{% else %}<p class="muted">A partner or associate with the “approve won” capability assigns numbers.</p>{% endif %}
+      {% endif %}
+      {% if phase_changes %}<h4 class="mt">History</h4><table class="tbl" style="font-size:.82rem"><tbody>{% for c in phase_changes %}<tr><td>{{ c.at|date:"j M Y" }}</td><td><span class="badge">{{ c.phase }}</span> {{ c.note }}</td><td><small>{{ c.by.get_full_name|default:c.by.username|default:"" }}</small></td></tr>{% endfor %}</tbody></table>{% endif %}
+    </div></div>
     <div class="card"><div class="card-body">
       <h3>At a glance</h3>
       <div class="kv">

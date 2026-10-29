@@ -1,6 +1,6 @@
-<tr id="employee-{{ employee.pk }}"><td colspan="6"><form hx-post="{% url 'employee_edit' employee.pk %}" hx-target="#employees" class="inline-form">
+<tr id="employee-{{ employee.pk }}"><td colspan="{% if can.view_costs %}6{% else %}5{% endif %}"><form hx-post="{% url 'employee_edit' employee.pk %}" hx-target="#employees" class="inline-form">
   <div class="field"><label>Name</label>{{ form.name }}</div><div class="field narrow" style="flex-basis:70px"><label>Initials</label>{{ form.initials }}</div><div class="field"><label>Role</label>{{ form.role }}</div>
-  <div class="field narrow"><label>Rate / h</label>{{ form.rate }}</div><div class="field narrow"><label>Cost / h</label>{{ form.cost_rate }}</div>
+  <div class="field narrow"><label>Rate / h</label>{{ form.rate }}</div>{% if can.view_costs %}<div class="field narrow"><label>Cost / h</label>{{ form.cost_rate }}</div>{% endif %}
   <div class="field"><label>Email</label>{{ form.email }}</div><div class="field narrow"><label>Ext. ID</label>{{ form.external_id }}</div>
   <div class="field check narrow">{{ form.is_active }}<label>Active</label></div>
   <button class="btn btn-primary btn-sm">Save</button><button type="button" class="btn btn-ghost btn-sm" hx-get="{% url 'library' %}" hx-select="#employees > *" hx-target="#employees">Cancel</button></form>{% if form.errors %}<div class="errorlist">{{ form.errors }}</div>{% endif %}</td></tr>

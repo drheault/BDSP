@@ -1,5 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+
+from core.permissions import require_cap
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,6 +22,7 @@ def client_list(request):
 
 
 @login_required
+@require_cap("edit_proposals")
 def client_create(request):
     form = ClientForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -41,6 +44,7 @@ def client_detail(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 def client_edit(request, pk):
     client = get_object_or_404(Client, pk=pk)
     form = ClientForm(request.POST or None, instance=client)
@@ -52,6 +56,7 @@ def client_edit(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def client_delete(request, pk):
     client = get_object_or_404(Client, pk=pk)
@@ -65,6 +70,7 @@ def client_delete(request, pk):
 
 # ---- contacts (htmx) ----------------------------------------------------------
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def contact_add(request, client_pk):
     client = get_object_or_404(Client, pk=client_pk)
@@ -82,6 +88,7 @@ def contact_add(request, client_pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 def contact_edit(request, pk):
     contact = get_object_or_404(Contact, pk=pk)
     if request.method == "POST":
@@ -101,6 +108,7 @@ def contact_row(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def contact_delete(request, pk):
     contact = get_object_or_404(Contact, pk=pk)

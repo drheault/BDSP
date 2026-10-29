@@ -43,7 +43,10 @@ the production variables.
 | **Proposals** | Create from a template, edit sections inline (add / remove / reorder), placeholders such as `{{client_name}}`, status pipeline (lead → won/lost), list and Kanban board views, duplicate, delete |
 | **Fee estimate** | Work-breakdown items (drawings, reports, design tasks, meetings…) each holding granular lines: named employee or role × hours × rate, expenses, software licences, subconsultants, travel with markup. Roll-ups by item, cost type and person; contingency; manual override; weighted value |
 | **Currencies** | Price each proposal in CAD, USD, EUR, ILS… (add any). Rate card is in the base currency and converts automatically; dashboard totals convert back to base |
-| **Project numbers** | Official project number validated against a configurable pattern (your file-server / HCL Notes classification); required before a proposal can be marked won |
+| **Project numbers & phases** | `B-ON601` in business development → `601C` consulting → `601D` design development → `601E` execution. Region codes (2-letter province/state, 3-letter country) and the sequence counter are managed in settings; the number is assigned once and the letter changes with the phase. Required before a proposal can be marked won; every change is logged |
+| **Records & files** | Per project: the file-server folder path (from a template) and a register of site-visit reports, photo dumps, monitoring data and progress rates with their SMB paths. Progress rates are averaged to feed future estimates |
+| **Roles & users** | Partners, Associates, Engineers, HR-Global, HR-Local, IT, Admins seeded; create, edit or delete roles and tick capabilities (see costs, approve won, change phase, manage settings…). Pages, buttons and columns follow the capabilities |
+| **Integrations** | Office Timesheets sync: watched export folder or HTTP endpoint, phase filter, duplicate protection, run history, "Sync now" and a schedulable command. HCL Notes placeholder |
 | **Suggestions** | While naming a work item, similar items from won projects appear with their estimated and booked hours; one click creates the item re-priced at current rates |
 | **Actuals** | Per won project: estimate vs. booked hours and cost by work item and by person; manual time entries; CSV import (Office Timesheets export format) |
 | **Export** | Word (.docx) and PDF downloads of the full proposal with logo, sections, scope, Gantt image and fee table |
@@ -89,13 +92,30 @@ htmx is loaded from unpkg; to self-host, drop `htmx.min.js` into `static/js/`
 
 ## Timesheets: sync → adopt → replace
 
-1. **Sync** (now): export from Office Timesheets to CSV and import on a won
-   proposal's *Actuals* tab, or run
-   `python manage.py import_timesheets export.csv --source ots`. Rows are
-   matched by project number, employee name / external ID, and work-item name
-   or code. `timesheets/connector.py` holds the API stub for scheduled pulls.
+1. **Sync** (now): under *Integrations*, point the connector at the folder
+   where Office Timesheets drops its scheduled export (or at an HTTP export
+   URL), choose which phases may receive hours (default C, D, E) and press
+   *Sync now*. Schedule `python manage.py sync_timesheets` hourly or nightly
+   with cron / Task Scheduler for hands-off operation. Each run is logged with
+   files, rows created, duplicates skipped and errors. Rows are matched by
+   project number, employee name / external ID, and work-item name or code.
+   One-off files can still be imported on a proposal's *Actuals* tab or with
+   `python manage.py import_timesheets export.csv --source ots`.
 2. **Adopt**: staff book time directly in BDSP against work items.
 3. **Replace**: retire the connector.
+
+## Permissions
+
+Capabilities are granted through access roles (Roles & users). A user's
+capabilities are the union of their roles; superusers have all of them. Views
+are protected with `@require_cap("…")` (`core/permissions.py`) and templates
+hide controls with `{% if can.capability %}`. Seeded roles: Partners (all),
+Associates, Engineers, HR-Global, HR-Local, IT, Admins — edit freely or add
+your own.
+
+Demo logins after `seed --demo`: `admin`/`admin` (superuser), `mrivera`
+(Partners), `jchen` (Associates), `dokafor` (Engineers), all with password
+`password` except admin.
 
 ## Configuration
 
@@ -111,9 +131,11 @@ python manage.py test
 
 ## Roadmap (designed for, not built yet)
 
-- Office Timesheets API sync on a schedule (connector stub in place)
+- Office Timesheets "adopt" phase: book time in BDSP and push back
+- LAN agent that indexes the project folders (site reports, photos, monitoring
+  exports) into project records automatically
 - Learned cost suggestions once enough won projects carry actuals (today: similarity on item names)
 - Collaboration: comments and review assignments on proposals for senior associates
 - CRM: activity log, follow-up reminders, notifications
 - Marketing: export project sheets as a brochure, pull them into proposals automatically
-- HCL Notes / file-server lookup to validate project numbers against the live register
+- HCL Notes lookup to reconcile project numbers with the live register (placeholder connector in place)

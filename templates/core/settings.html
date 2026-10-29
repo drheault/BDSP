@@ -19,14 +19,22 @@
     </div>
     <h3 class="mt">Brand colours</h3>
     <div class="row-flex">{% include "includes/field.html" with field=form.primary_color %}{% include "includes/field.html" with field=form.accent_color %}</div>
-    <h3 class="mt">Project number format</h3>
-    <p class="muted">Every won proposal needs an official project number that matches your file-server and HCL Notes classification. Define the format as a regular expression; the app refuses numbers that do not match.</p>
+    <h3 class="mt">Project numbering</h3>
+    <p class="muted">Numbers follow the firm's phases: <strong>B</strong>usiness development → <strong>C</strong>onsulting → <strong>D</strong>esign development → <strong>E</strong>xecution. The sequence is assigned once (in phase B) and kept; the letter changes as the project advances. Example with current settings: <code>{{ profile.number_example }}</code>.</p>
     <div class="form-grid">
-      {% include "includes/field.html" with field=form.project_number_pattern %}
-      {% include "includes/field.html" with field=form.project_number_example %}
-      {% include "includes/field.html" with field=form.project_number_help extra_class="full" %}
+      {% include "includes/field.html" with field=form.bd_number_format %}
+      {% include "includes/field.html" with field=form.phase_number_format %}
+      {% include "includes/field.html" with field=form.number_digits %}
+      {% include "includes/field.html" with field=form.sequence_start %}
       {% include "includes/field.html" with field=form.require_project_number_when_won extra_class="full" %}
     </div>
+    <h3 class="mt">File server &amp; HCL Notes</h3>
+    <div class="form-grid">
+      {% include "includes/field.html" with field=form.smb_path_template extra_class="full" %}
+      {% include "includes/field.html" with field=form.notes_server %}
+      {% include "includes/field.html" with field=form.notes_database %}
+    </div>
+    <div class="help">Sync settings and status for Office Timesheets and Notes live under <a href="{% url 'integrations' %}">Integrations</a>.</div>
     <div class="form-actions"><button class="btn btn-primary" type="submit">Save settings</button></div>
   </div></div>
   <div class="card"><div class="card-body">
@@ -40,5 +48,6 @@
   </div></div>
 </div>
 </form>
+<div class="card mt"><div class="card-head"><h3>Regions for project numbers</h3><span class="muted">2 letters = province / state, 3 letters = country</span></div><div id="regions">{% include "core/_region_list.html" %}</div></div>
 <div class="card mt"><div class="card-head"><h3>Currencies</h3><span class="muted">Default: {{ profile.base_currency.code }}</span></div><div id="currencies">{% include "core/_currency_list.html" %}</div></div>
 {% endblock %}

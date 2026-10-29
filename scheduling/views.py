@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+
+from core.permissions import require_cap
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -52,6 +54,7 @@ def proposal_schedule(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def task_add(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -66,6 +69,7 @@ def task_add(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 def task_edit(request, pk):
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
@@ -85,6 +89,7 @@ def task_row(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def task_delete(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -94,6 +99,7 @@ def task_delete(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def task_move(request, pk, direction):
     task = get_object_or_404(Task, pk=pk)
@@ -102,6 +108,7 @@ def task_move(request, pk, direction):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def task_shift(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -127,6 +134,7 @@ def _shift_with_successors(task, days, seen=None):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def schedule_defaults(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -143,6 +151,7 @@ def schedule_defaults(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def schedule_shift_all(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)

@@ -1,6 +1,6 @@
 {% load bdsp %}
 <div class="page-head">
-  <div><div class="crumbs"><a href="{% url 'proposal_list' %}">Proposals</a> / <span class="mono">{{ proposal.number }}</span>{% if proposal.project_number %} · project <span class="mono"><strong>{{ proposal.project_number }}</strong></span>{% endif %}</div>
+  <div><div class="crumbs"><a href="{% url 'proposal_list' %}">Proposals</a> / <span class="mono">{{ proposal.number }}</span>{% if proposal.project_number %} · project <span class="mono"><strong>{{ proposal.project_number }}</strong></span> <span class="badge badge-{% if proposal.phase == 'B' %}lead{% elif proposal.phase == 'C' %}drafting{% elif proposal.phase == 'D' %}review{% else %}construction{% endif %}" title="{{ proposal.phase_name }}">Phase {{ proposal.phase }}</span>{% endif %}</div>
     <h1>{{ proposal.title }}</h1>
     <div class="sub">{% if proposal.client %}<a href="{% url 'client_detail' proposal.client.pk %}">{{ proposal.client }}</a>{% else %}No client{% endif %}{% if proposal.contact %} · {{ proposal.contact.name }}{% endif %} · <span class="badge badge-{{ proposal.service_type }}">{{ proposal.get_service_type_display }}</span> · {{ proposal.cur.code }}{% if proposal.due_date %} · due {{ proposal.due_date|date:"j M Y" }}{% if proposal.is_open %} (<span class="{% if proposal.days_to_due < 0 %}due-bad{% elif proposal.days_to_due <= 7 %}due-warn{% endif %}">{{ proposal.days_to_due }} d</span>){% endif %}{% endif %}{% if proposal.status == "won" and proposal.project_status %} · <span class="badge badge-won">{{ proposal.get_project_status_display }}</span>{% endif %}</div>
   </div>
@@ -8,8 +8,8 @@
     {% include "proposals/_status_control.html" %}
     <a class="btn" href="{% url 'proposal_export' proposal.pk 'docx' %}" title="Download Word document">Word</a>
     <a class="btn" href="{% url 'proposal_export' proposal.pk 'pdf' %}" title="Download PDF">PDF</a>
-    <form method="post" action="{% url 'proposal_duplicate' proposal.pk %}">{% csrf_token %}<button class="btn">Duplicate</button></form>
-    <form method="post" action="{% url 'proposal_delete' proposal.pk %}" data-confirm="Delete proposal {{ proposal.number }}? This cannot be undone.">{% csrf_token %}<button class="btn btn-danger">Delete</button></form>
+    {% if can.edit_proposals %}<form method="post" action="{% url 'proposal_duplicate' proposal.pk %}">{% csrf_token %}<button class="btn">Duplicate</button></form>
+    <form method="post" action="{% url 'proposal_delete' proposal.pk %}" data-confirm="Delete proposal {{ proposal.number }}? This cannot be undone.">{% csrf_token %}<button class="btn btn-danger">Delete</button></form>{% endif %}
   </div>
 </div>
 <div class="tabs">
@@ -17,6 +17,7 @@
   <a href="{% url 'proposal_sections' proposal.pk %}" class="{% if tab == 'content' %}active{% endif %}">Content <span class="count">{{ proposal.sections.count }}</span></a>
   <a href="{% url 'proposal_fee' proposal.pk %}" class="{% if tab == 'fee' %}active{% endif %}">Fee estimate <span class="count">{{ proposal.fee_total|money:proposal.cur }}</span></a>
   <a href="{% url 'proposal_schedule' proposal.pk %}" class="{% if tab == 'schedule' %}active{% endif %}">Schedule <span class="count">{{ proposal.tasks.count }}</span></a>
-  <a href="{% url 'proposal_actuals' proposal.pk %}" class="{% if tab == 'actuals' %}active{% endif %}">Actuals{% if proposal.actual_hours %} <span class="count">{{ proposal.actual_hours|num:0 }} h</span>{% endif %}</a>
+  {% if can.view_actuals %}<a href="{% url 'proposal_actuals' proposal.pk %}" class="{% if tab == 'actuals' %}active{% endif %}">Actuals{% if proposal.actual_hours %} <span class="count">{{ proposal.actual_hours|num:0 }} h</span>{% endif %}</a>{% endif %}
+  <a href="{% url 'proposal_records' proposal.pk %}" class="{% if tab == 'records' %}active{% endif %}">Records &amp; files{% if proposal.records.count %} <span class="count">{{ proposal.records.count }}</span>{% endif %}</a>
   <a href="{% url 'proposal_preview' proposal.pk %}" class="{% if tab == 'preview' %}active{% endif %}">Preview &amp; print</a>
 </div>

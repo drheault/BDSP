@@ -35,7 +35,7 @@ class GanttTests(TestCase):
 
 class ScheduleViewTests(TestCase):
     def setUp(self):
-        self.client.force_login(get_user_model().objects.create_user("u", password="p"))
+        self.client.force_login(get_user_model().objects.create_superuser("u", "u@x.com", "p"))
         self.p = Proposal.objects.create(title="P")
 
     def test_add_edit_cascade_delete(self):

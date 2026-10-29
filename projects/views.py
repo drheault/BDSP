@@ -1,5 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+
+from core.permissions import require_cap
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -35,6 +37,7 @@ def project_detail(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 def project_create(request):
     form = PastProjectForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -45,6 +48,7 @@ def project_create(request):
 
 
 @login_required
+@require_cap("manage_projects_library")
 def project_edit(request, pk):
     project = get_object_or_404(PastProject, pk=pk)
     form = PastProjectForm(request.POST or None, instance=project)
@@ -56,6 +60,7 @@ def project_edit(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def project_delete(request, pk):
     project = get_object_or_404(PastProject, pk=pk)
@@ -65,6 +70,7 @@ def project_delete(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def image_add(request, pk):
     project = get_object_or_404(PastProject, pk=pk)
@@ -77,6 +83,7 @@ def image_add(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def image_caption(request, pk):
     image = get_object_or_404(ProjectImage, pk=pk)
@@ -87,6 +94,7 @@ def image_caption(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def image_delete(request, pk):
     image = get_object_or_404(ProjectImage, pk=pk)
@@ -96,6 +104,7 @@ def image_delete(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def image_cover(request, pk):
     """Make this image the cover by moving it to the front."""

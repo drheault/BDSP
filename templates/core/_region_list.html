@@ -1,0 +1,8 @@
+<table class="tbl"><thead><tr><th>Code</th><th>Name</th><th>Kind</th><th></th></tr></thead><tbody>
+{% for region in regions %}{% include "core/_region_row.html" %}{% empty %}<tr><td colspan="4" class="muted">No regions yet.</td></tr>{% endfor %}
+</tbody></table>
+<div class="card-body" style="border-top:1px solid var(--line)"><form hx-post="{% url 'region_add' %}" hx-target="#regions" class="inline-form">
+  <div class="field narrow" style="flex-basis:80px"><label>Code</label>{{ region_form.code }}{% for e in region_form.code.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+  <div class="field"><label>Name</label>{{ region_form.name }}</div>
+  <div class="field narrow"><label>Kind</label>{{ region_form.kind }}</div>
+  <button class="btn btn-primary btn-sm">Add region</button></form></div>

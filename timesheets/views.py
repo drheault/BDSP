@@ -4,11 +4,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core.models import CompanyProfile
+from core.permissions import require_cap
 from proposals.models import Proposal
 
-from .forms import ActualEntryForm, CsvImportForm
+from .connector import sync_now
+from .forms import ActualEntryForm, ConnectorForm, CsvImportForm
 from .importer import import_csv
-from .models import ActualEntry
+from .models import ActualEntry, SyncRun, TimesheetConnector
 
 
 def _rows(proposal):
@@ -37,6 +40,7 @@ def _rows(proposal):
 
 
 @login_required
+@require_cap("view_actuals")
 def proposal_actuals(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
     items, people = _rows(proposal)
@@ -53,6 +57,7 @@ def proposal_actuals(request, pk):
 
 
 @login_required
+@require_cap("edit_actuals")
 @require_POST
 def actual_add(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -68,6 +73,7 @@ def actual_add(request, pk):
 
 
 @login_required
+@require_cap("edit_actuals")
 @require_POST
 def actual_delete(request, pk):
     e = get_object_or_404(ActualEntry, pk=pk)
@@ -76,6 +82,7 @@ def actual_delete(request, pk):
 
 
 @login_required
+@require_cap("edit_actuals")
 @require_POST
 def actual_import(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -88,3 +95,48 @@ def actual_import(request, pk):
     else:
         messages.error(request, "Please choose a CSV file.")
     return redirect("proposal_actuals", pk=pk)
+
+
+# ---- integrations ---------------------------------------------------------
+@login_required
+@require_cap("manage_integrations")
+def integrations(request):
+    cfg = TimesheetConnector.get_solo()
+    company = CompanyProfile.get_solo()
+    if request.method == "POST":
+        form = ConnectorForm(request.POST, instance=cfg)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Connector settings saved.")
+            return redirect("integrations")
+    else:
+        form = ConnectorForm(instance=cfg)
+    sample = Proposal.objects.filter(project_number__isnull=False).exclude(phase="B").first() or Proposal.objects.filter(project_number__isnull=False).first()
+    return render(
+        request, "timesheets/integrations.html",
+        {"form": form, "cfg": cfg, "runs": SyncRun.objects.filter(connector=cfg)[:15], "company": company,
+         "sample_path": sample.smb_path if sample else "", "sample": sample,
+         "entries_ots": ActualEntry.objects.filter(source="ots").count()},
+    )
+
+
+@login_required
+@require_cap("manage_integrations")
+@require_POST
+def integrations_sync(request):
+    run = sync_now(trigger="manual")
+    level = messages.success if run.status == "ok" else messages.warning if run.status == "partial" else messages.error
+    level(request, f"Sync {run.get_status_display().lower()}: {run.files} file(s), {run.created} created, {run.skipped} skipped, {run.errors} errors.")
+    return redirect("integrations")
+
+
+@login_required
+@require_cap("manage_integrations")
+@require_POST
+def notes_test(request):
+    company = CompanyProfile.get_solo()
+    if company.notes_server and company.notes_database:
+        messages.warning(request, f"HCL Notes connector is a placeholder: would connect to {company.notes_server}/{company.notes_database} and look up project numbers. Needs the Domino REST or NRPC access details to implement.")
+    else:
+        messages.error(request, "Set the Notes server and database under Company settings first.")
+    return redirect("integrations")

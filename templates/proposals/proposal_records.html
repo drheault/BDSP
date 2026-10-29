@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% load bdsp %}
+{% block title %}{{ proposal.number }} records{% endblock %}
+{% block content %}
+{% include "proposals/_proposal_header.html" %}
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    {% if proposal.smb_path %}<div class="callout"><strong>Project folder:</strong> <a class="mono" href="file:///{{ proposal.smb_path|cut:'\\\\' }}" title="Opens on Windows with local / VPN access">{{ proposal.smb_path }}</a> <span class="muted">(requires LAN or VPN access)</span></div>{% else %}<div class="callout warn">Assign a project number to get the file-server folder path.</div>{% endif %}
+    <div class="card"><div class="card-head"><h3>Project records</h3><span class="muted">{% for k, n in kind_counts.items %}{{ n }} {{ k|lower }}{% if not forloop.last %} · {% endif %}{% endfor %}</span></div>
+      <table class="tbl"><thead><tr><th>Date</th><th>Type</th><th>Title</th><th class="num">Value</th><th>Location</th><th></th></tr></thead><tbody>
+      {% for r in records %}<tr><td>{{ r.date|date:"j M Y" }}</td><td><span class="badge">{{ r.get_kind_display }}</span></td><td>{{ r.title }}{% if r.notes %}<br><small class="muted">{{ r.notes }}</small>{% endif %}</td><td class="num">{% if r.value is not None %}{{ r.value|num:2 }} {{ r.unit }}{% else %}—{% endif %}</td><td><small class="mono" style="word-break:break-all">{{ r.path|default:"—" }}</small></td>
+      <td class="row-actions">{% if can.edit_proposals %}<form method="post" action="{% url 'record_delete' r.pk %}" data-confirm="Delete this record?">{% csrf_token %}<button class="btn btn-xs btn-danger">×</button></form>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="6"><div class="empty"><strong>No records yet</strong>Register site visit reports, photo dumps, monitoring data and progress rates as they land on the file server.</div></td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="stack">
+    <div class="card stat"><div class="k">Phase</div><div class="v">{{ proposal.phase }}</div><div class="d">{{ proposal.phase_name }}{% if proposal.project_number %} · {{ proposal.project_number }}{% endif %}</div></div>
+    {% if avg_rate is not None %}<div class="card stat"><div class="k">Average progress rate</div><div class="v">{{ avg_rate|num:1 }} <small class="muted" style="font-size:.9rem">{{ rate_unit }}</small></div><div class="d">from logged progress records — feeds future estimates</div></div>{% endif %}
+    {% if can.edit_proposals %}<div class="card"><div class="card-body"><h3>Add record</h3>
+      <form method="post" action="{% url 'record_add' proposal.pk %}" class="stack">{% csrf_token %}
+        {% include "includes/field.html" with field=form.kind %}{% include "includes/field.html" with field=form.date %}{% include "includes/field.html" with field=form.title %}
+        <div class="row-flex">{% include "includes/field.html" with field=form.value %}{% include "includes/field.html" with field=form.unit %}</div>
+        {% include "includes/field.html" with field=form.path %}{% include "includes/field.html" with field=form.notes %}
+        <button class="btn btn-primary">Add record</button></form></div></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

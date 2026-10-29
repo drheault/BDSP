@@ -7,7 +7,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 
-from core.models import CompanyProfile, Currency
+from core.models import CompanyProfile, Currency, Region
 from crm.models import Client, Contact
 
 ZERO = Decimal("0")
@@ -130,12 +130,23 @@ class Proposal(models.Model):
         ON_HOLD = "on_hold", "On hold"
         COMPLETE = "complete", "Complete"
 
+    class Phase(models.TextChoices):
+        B = "B", "B — Business development"
+        C = "C", "C — Consulting"
+        D = "D", "D — Design development"
+        E = "E", "E — Execution / construction"
+
+    PHASE_NAMES = {"B": "Business Development", "C": "Consulting", "D": "Design Development", "E": "Execution"}
     OPEN_STATUSES = ("lead", "drafting", "review", "submitted", "shortlisted")
 
     number = models.CharField(max_length=20, unique=True, blank=True)
+    # ---- official project number = region + sequence + phase ----------------
+    region = models.ForeignKey(Region, on_delete=models.PROTECT, null=True, blank=True, related_name="proposals", help_text="Province / state (2 letters) or country (3 letters).")
+    sequence = models.PositiveIntegerField(null=True, blank=True, help_text="Sequence number; assigned by the app, kept through all phases.")
+    phase = models.CharField(max_length=1, choices=Phase.choices, default=Phase.B)
     project_number = models.CharField(
-        max_length=50, blank=True, null=True, unique=True,
-        help_text="Official project number (file server / HCL Notes). Format is set in Company settings.",
+        max_length=30, blank=True, null=True, unique=True, editable=False,
+        help_text="Derived from region, sequence and phase (e.g. B-ON601, then 601C).",
     )
     project_status = models.CharField(max_length=12, choices=ProjectStatus.choices, blank=True, default="")
     title = models.CharField(max_length=250)
@@ -172,23 +183,74 @@ class Proposal(models.Model):
         return f"{self.number} — {self.title}"
 
     # ----- numbering / validation --------------------------------------------
+    def compute_project_number(self):
+        if self.sequence is None:
+            return None
+        company = CompanyProfile.get_solo()
+        return company.format_number(self.region.code if self.region_id else "", self.sequence, self.phase)
+
     def clean(self):
         company = CompanyProfile.get_solo()
-        if self.project_number:
-            self.project_number = self.project_number.strip()
-            company.validate_project_number(self.project_number)
-        else:
-            self.project_number = None
-        if self.status == self.Status.WON and company.require_project_number_when_won and not self.project_number:
-            raise ValidationError({"project_number": "A project number is required before a proposal can be marked won."})
+        if self.sequence is not None and not self.region_id:
+            raise ValidationError({"region": "Pick a region before assigning a project number."})
+        if self.status == self.Status.WON and company.require_project_number_when_won and self.sequence is None:
+            raise ValidationError("Assign a project number (region + sequence) before marking the proposal won.")
+        computed = self.compute_project_number()
+        if computed:
+            clash = Proposal.objects.filter(project_number=computed).exclude(pk=self.pk).first()
+            if clash:
+                raise ValidationError(f"Project number {computed} is already used by {clash.number}.")
+
+    @classmethod
+    def next_sequence(cls) -> int:
+        company = CompanyProfile.get_solo()
+        last = cls.objects.filter(sequence__isnull=False).order_by("-sequence").values_list("sequence", flat=True).first()
+        return max(company.sequence_start, (last or 0) + 1)
+
+    def assign_project_number(self, region=None, user=None):
+        """Give this pursuit the next sequence number in its region (phase B)."""
+        if region is not None:
+            self.region = region
+        if not self.region_id:
+            raise ValidationError("A region is required to assign a project number.")
+        if self.sequence is None:
+            self.sequence = self.next_sequence()
+        self.save()
+        PhaseChange.objects.create(proposal=self, phase=self.phase, note=f"Number {self.project_number} assigned", by=user)
+        return self.project_number
+
+    def advance_phase(self, new_phase: str, user=None, note: str = ""):
+        if new_phase not in self.Phase.values:
+            raise ValidationError("Unknown phase.")
+        if self.sequence is None:
+            raise ValidationError("Assign a project number before changing phase.")
+        old = self.phase
+        self.phase = new_phase
+        if new_phase != "B" and self.status != self.Status.WON:
+            self.status = self.Status.WON
+        self.save()
+        PhaseChange.objects.create(proposal=self, phase=new_phase, note=note or f"{old} → {new_phase}", by=user)
+
+    @property
+    def phase_name(self):
+        return self.PHASE_NAMES.get(self.phase, "")
+
+    @property
+    def smb_path(self):
+        tpl = CompanyProfile.get_solo().smb_path_template
+        if not tpl or not self.project_number:
+            return ""
+        return tpl.format(project_number=self.project_number, phase=self.phase, phase_name=self.phase_name, region=self.region.code if self.region_id else "", seq=self.sequence)
 
     def save(self, *args, **kwargs):
         if not self.number:
             self.number = self.next_number()
         if not self.currency_id:
             self.currency = CompanyProfile.get_solo().base_currency
-        if self.project_number == "":
-            self.project_number = None
+        self.project_number = self.compute_project_number()
+        if self.status == self.Status.WON and self.phase == self.Phase.B and self.sequence is not None:
+            self.phase = self.Phase.C
+            self.project_number = self.compute_project_number()
         if self.status == self.Status.SUBMITTED and not self.submitted_at:
             self.submitted_at = timezone.localdate()
         if self.status in (self.Status.WON, self.Status.LOST) and not self.decided_at:
@@ -324,6 +386,7 @@ class Proposal(models.Model):
             "project_location": self.location or "[Location]",
             "proposal_number": self.number,
             "project_number": self.project_number or "[Project no.]",
+            "phase": self.phase,
             "company_name": company.name,
             "date": timezone.localdate().strftime("%B %d, %Y"),
             "owner_name": (self.owner.get_full_name() or self.owner.get_username()) if self.owner else "[Lead]",
@@ -345,6 +408,54 @@ class Proposal(models.Model):
             ProposalSection.objects.create(proposal=self, order=start + i, title=s.title, body=s.body)
         self.template = template
         self.save(update_fields=["template"])
+
+
+class PhaseChange(models.Model):
+    """Audit trail of numbering and phase transitions."""
+
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, related_name="phase_changes")
+    phase = models.CharField(max_length=1, choices=Proposal.Phase.choices)
+    note = models.CharField(max_length=200, blank=True)
+    by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-at"]
+
+    def __str__(self):
+        return f"{self.proposal.number} → {self.phase} ({self.at:%Y-%m-%d})"
+
+
+class ProjectRecord(models.Model):
+    """Execution-phase records that live on the file server: site visit reports,
+    photo dumps, instrumentation data, progress rates. Registering them here
+    (with their SMB path) is the first step toward mining them for predictions."""
+
+    class Kind(models.TextChoices):
+        SITE_VISIT = "site_visit", "Site visit report"
+        PHOTOS = "photos", "Photo dump"
+        MONITORING = "monitoring", "Instrumentation & monitoring data"
+        PROGRESS = "progress", "Progress rate"
+        PRESENTATION = "presentation", "Technical presentation"
+        CALC = "calc", "Calculation / model"
+        OTHER = "other", "Other"
+
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, related_name="records")
+    kind = models.CharField(max_length=14, choices=Kind.choices, default=Kind.SITE_VISIT)
+    date = models.DateField()
+    title = models.CharField(max_length=200)
+    value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="For progress rates / readings.")
+    unit = models.CharField(max_length=30, blank=True, help_text="e.g. m/day, rings/shift, mm")
+    path = models.CharField(max_length=500, blank=True, help_text="File-server path or URL of the document / folder.")
+    notes = models.CharField(max_length=500, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        return f"{self.date} {self.title}"
 
 
 class ProposalSection(models.Model):

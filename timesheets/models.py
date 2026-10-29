@@ -6,7 +6,7 @@ from proposals.models import Employee, FeeItem, Proposal
 
 
 class ActualEntry(models.Model):
-    """Hours actually booked against a (won) proposal — from timesheets or manual entry.
+    """Hours actually booked against a project — from timesheets or manual entry.
     Cost is stored in the base currency so it can be compared with the estimate."""
 
     class Source(models.TextChoices):
@@ -46,16 +46,74 @@ class ActualEntry(models.Model):
 
 
 class TimesheetConnector(models.Model):
-    """Configuration for an external timesheet source (Office Timesheets today;
-    the replacement tool later). Sync strategy: sync → adopt → replace."""
+    """Configuration for the Office Timesheets sync (and, later, its replacement).
+
+    Two transports are supported because Office Timesheets is old software:
+    * **folder** — OTS runs a scheduled export into a network folder; the sync
+      picks up new files there (the practical option on a locked-down LAN).
+    * **http** — an export URL that returns CSV (or JSON rows) with optional
+      API key / basic auth, for when a reporting endpoint is available.
+    """
+
+    class Transport(models.TextChoices):
+        FOLDER = "folder", "Watched export folder"
+        HTTP = "http", "HTTP export endpoint"
 
     name = models.CharField(max_length=100, default="Office Timesheets")
     kind = models.CharField(max_length=10, choices=ActualEntry.Source.choices, default=ActualEntry.Source.OFFICE_TIMESHEETS)
-    base_url = models.URLField(blank=True)
+    transport = models.CharField(max_length=10, choices=Transport.choices, default=Transport.FOLDER)
+    export_folder = models.CharField(max_length=255, blank=True, help_text="Folder (local or mounted share) where OTS drops export files.")
+    file_pattern = models.CharField(max_length=60, default="*.csv")
+    base_url = models.URLField(blank=True, help_text="Export URL returning CSV or JSON.")
     api_key = models.CharField(max_length=255, blank=True)
+    username = models.CharField(max_length=100, blank=True)
+    password = models.CharField(max_length=255, blank=True)
+    only_phases = models.CharField(max_length=10, default="CDE", help_text="Import rows only for projects in these phases (e.g. CDE).")
+    lookback_days = models.PositiveIntegerField(default=45, help_text="Re-request this many days of history on each sync (duplicates are skipped).")
     is_enabled = models.BooleanField(default=False)
     last_synced_at = models.DateTimeField(null=True, blank=True)
     last_result = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class SyncRun(models.Model):
+    class Status(models.TextChoices):
+        OK = "ok", "OK"
+        PARTIAL = "partial", "Completed with errors"
+        FAILED = "failed", "Failed"
+
+    connector = models.ForeignKey(TimesheetConnector, on_delete=models.CASCADE, related_name="runs")
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.OK)
+    trigger = models.CharField(max_length=20, default="manual")
+    files = models.PositiveIntegerField(default=0)
+    created = models.PositiveIntegerField(default=0)
+    skipped = models.PositiveIntegerField(default=0)
+    errors = models.PositiveIntegerField(default=0)
+    log = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.started_at:%Y-%m-%d %H:%M} {self.get_status_display()}"
+
+
+class ProcessedFile(models.Model):
+    """Files already imported from the watched folder (by name + size + mtime)."""
+
+    connector = models.ForeignKey(TimesheetConnector, on_delete=models.CASCADE, related_name="processed_files")
+    name = models.CharField(max_length=255)
+    fingerprint = models.CharField(max_length=80)
+    imported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("connector", "fingerprint")]

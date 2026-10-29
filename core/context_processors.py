@@ -1,8 +1,10 @@
-from .models import CompanyProfile
+from .models import CompanyProfile, user_capabilities
 
 
 def company(request):
     try:
-        return {"company": CompanyProfile.get_solo()}
+        company = CompanyProfile.get_solo()
     except Exception:  # pragma: no cover - e.g. before migrations
-        return {"company": None}
+        company = None
+    caps = user_capabilities(getattr(request, "user", None))
+    return {"company": company, "caps": caps, "can": {c: True for c in caps}}

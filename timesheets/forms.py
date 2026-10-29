@@ -2,7 +2,7 @@ from django import forms
 
 from proposals.models import Employee, FeeItem
 
-from .models import ActualEntry
+from .models import ActualEntry, TimesheetConnector
 
 
 class DateInput(forms.DateInput):
@@ -28,3 +28,10 @@ class ActualEntryForm(forms.ModelForm):
 class CsvImportForm(forms.Form):
     file = forms.FileField(help_text="CSV with columns: date, employee, hours and optionally project_number, task, cost, description, id.")
     source = forms.ChoiceField(choices=[("csv", "CSV import"), ("ots", "Office Timesheets export")], initial="csv")
+
+
+class ConnectorForm(forms.ModelForm):
+    class Meta:
+        model = TimesheetConnector
+        fields = ["name", "transport", "export_folder", "file_pattern", "base_url", "api_key", "username", "password", "only_phases", "lookback_days", "is_enabled"]
+        widgets = {"password": forms.PasswordInput(render_value=True), "api_key": forms.PasswordInput(render_value=True)}

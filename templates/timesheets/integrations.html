@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Integrations{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Integrations</h1><div class="sub">Office Timesheets sync, file-server folders and the HCL Notes placeholder.</div></div></div>
+<div class="grid grid-3">
+  <div class="span-2 stack">
+    <div class="card"><div class="card-head"><h3>Office Timesheets → actuals</h3>
+      <form method="post" action="{% url 'integrations_sync' %}">{% csrf_token %}<button class="btn btn-accent">Sync now</button></form></div>
+      <div class="card-body">
+        <p class="muted">Strategy: <strong>sync</strong> (now) → <strong>adopt</strong> (staff book time here) → <strong>replace</strong>. Each sync imports new rows, matches them to projects by project number, to people by name or external ID, and to work items by name or code. Duplicates are skipped by row ID. Only projects in the selected phases receive hours.</p>
+        <form method="post" class="stack">{% csrf_token %}
+          <div class="form-grid">
+            {% include "includes/field.html" with field=form.name %}{% include "includes/field.html" with field=form.transport %}
+            {% include "includes/field.html" with field=form.export_folder %}{% include "includes/field.html" with field=form.file_pattern %}
+            {% include "includes/field.html" with field=form.base_url extra_class="full" %}
+            {% include "includes/field.html" with field=form.api_key %}{% include "includes/field.html" with field=form.username %}{% include "includes/field.html" with field=form.password %}
+            {% include "includes/field.html" with field=form.only_phases %}{% include "includes/field.html" with field=form.lookback_days %}
+            {% include "includes/field.html" with field=form.is_enabled extra_class="full" %}
+          </div>
+          <div class="form-actions"><button class="btn btn-primary">Save connector</button></div>
+        </form>
+        <div class="callout mt"><strong>Automate it:</strong> schedule <code>python manage.py sync_timesheets</code> (cron on the server, or Windows Task Scheduler) — hourly or nightly. With the folder transport, point Office Timesheets' scheduled export at the same share; every new file is picked up once.</div>
+      </div>
+    </div>
+    <div class="card"><div class="card-head"><h3>Sync history</h3><span class="muted">{{ entries_ots }} entries from Office Timesheets so far</span></div>
+      <table class="tbl"><thead><tr><th>Started</th><th>Trigger</th><th>Status</th><th class="num">Files</th><th class="num">Created</th><th class="num">Skipped</th><th class="num">Errors</th></tr></thead><tbody>
+      {% for r in runs %}<tr><td>{{ r.started_at|date:"j M Y H:i" }}</td><td>{{ r.trigger }}</td><td><span class="badge {% if r.status == 'ok' %}badge-won{% elif r.status == 'partial' %}badge-submitted{% else %}badge-lost{% endif %}">{{ r.get_status_display }}</span></td><td class="num">{{ r.files }}</td><td class="num">{{ r.created }}</td><td class="num">{{ r.skipped }}</td><td class="num">{{ r.errors }}</td></tr>
+      {% if r.log %}<tr><td colspan="7"><pre class="muted" style="margin:0;white-space:pre-wrap;font-size:.78rem">{{ r.log }}</pre></td></tr>{% endif %}
+      {% empty %}<tr><td colspan="7" class="muted">No syncs yet.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-body"><h3>File server (SMB)</h3>
+      <p class="muted">Project folders live on the LAN share. The path template is set under <a href="{% url 'company_settings' %}">Company settings</a>; each project shows an “Open project folder” link built from it.</p>
+      <div class="kv"><span class="k">Template</span><span class="mono" style="word-break:break-all">{{ company.smb_path_template|default:"—" }}</span>{% if sample %}<span class="k">Example</span><span class="mono" style="word-break:break-all">{{ sample_path }}</span>{% endif %}</div>
+      <div class="help mt-sm">Next step: a small agent on the LAN that indexes site-visit reports, photo dumps and monitoring exports into project records, so progress rates can feed the estimate suggestions.</div></div></div>
+    <div class="card"><div class="card-body"><h3>HCL Notes</h3>
+      <p class="muted">Placeholder connector for the project register in Notes. Configure server and database under Company settings; the real lookup needs Domino REST or NRPC access details.</p>
+      <div class="kv"><span class="k">Server</span><span>{{ company.notes_server|default:"—" }}</span><span class="k">Database</span><span>{{ company.notes_database|default:"—" }}</span></div>
+      <form method="post" action="{% url 'notes_test' %}" class="mt-sm">{% csrf_token %}<button class="btn btn-sm">Test connection</button></form></div></div>
+    <div class="card"><div class="card-body"><h3>Last sync</h3><div class="kv"><span class="k">When</span><span>{{ cfg.last_synced_at|date:"j M Y H:i"|default:"never" }}</span><span class="k">Result</span><span>{{ cfg.last_result|default:"—" }}</span><span class="k">Enabled</span><span>{{ cfg.is_enabled|yesno:"yes,no" }}</span></div></div></div>
+  </div>
+</div>
+{% endblock %}

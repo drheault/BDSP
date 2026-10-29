@@ -1,5 +1,5 @@
 <form id="status-control" class="row-flex" hx-post="{% url 'proposal_status' proposal.pk %}" hx-trigger="change" hx-target="#status-control" hx-swap="outerHTML">
   <input type="hidden" name="render" value="header">
   {% include "proposals/_status_badge.html" %}
-  <select name="status" style="width:auto;padding:.3rem .5rem;font-size:.82rem">{% for k, v in proposal.Status.choices %}<option value="{{ k }}" {% if k == proposal.status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  {% if can.edit_proposals %}<select name="status" style="width:auto;padding:.3rem .5rem;font-size:.82rem">{% for k, v in proposal.Status.choices %}{% if can.approve_won or k not in "won,lost,no_bid" or k == proposal.status %}<option value="{{ k }}" {% if k == proposal.status %}selected{% endif %}>{{ v }}</option>{% endif %}{% endfor %}</select>{% endif %}
 </form>

@@ -6,6 +6,8 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from core.models import Region
+from core.permissions import has_cap, require_cap
 from crm.models import Contact
 
 from .forms import (
@@ -13,6 +15,7 @@ from .forms import (
     FeeItemForm,
     FeeLineForm,
     FeeSettingsForm,
+    ProjectRecordForm,
     ProposalCreateForm,
     ProposalForm,
     ProposalSectionForm,
@@ -25,6 +28,8 @@ from .models import (
     Employee,
     FeeItem,
     FeeLine,
+    PhaseChange,
+    ProjectRecord,
     Proposal,
     ProposalSection,
     ProposalTemplate,
@@ -32,6 +37,7 @@ from .models import (
     StaffRole,
     TemplateSection,
 )
+from django.core.exceptions import ValidationError
 from .suggestions import suggest_for_item
 from .utils import move_item
 
@@ -86,6 +92,7 @@ def proposal_board(request):
 
 
 @login_required
+@require_cap("edit_proposals")
 def proposal_create(request):
     form = ProposalCreateForm(request.POST or None, initial={"owner": request.user.pk})
     if request.method == "POST" and form.is_valid():
@@ -96,7 +103,11 @@ def proposal_create(request):
         template = form.cleaned_data.get("template")
         if template:
             proposal.apply_template(template)
-        messages.success(request, f"Proposal {proposal.number} created.")
+        if form.cleaned_data.get("assign_number") and proposal.region_id and has_cap(request.user, "approve_won"):
+            proposal.assign_project_number(user=request.user)
+            messages.success(request, f"Proposal {proposal.number} created with project number {proposal.project_number}.")
+        else:
+            messages.success(request, f"Proposal {proposal.number} created.")
         return redirect("proposal_detail", pk=proposal.pk)
     return render(request, "proposals/proposal_create.html", {"form": form})
 
@@ -118,7 +129,84 @@ def proposal_detail(request, pk):
         form = ProposalForm(instance=proposal)
     ctx = _proposal_ctx(proposal, "overview")
     ctx["form"] = form
+    ctx["regions"] = Region.objects.filter(is_active=True)
+    ctx["next_sequence"] = Proposal.next_sequence()
+    ctx["phase_changes"] = proposal.phase_changes.select_related("by")[:8]
+    ctx["phases"] = Proposal.Phase.choices
     return render(request, "proposals/proposal_detail.html", ctx)
+
+
+@login_required
+@require_cap("approve_won")
+@require_POST
+def assign_number(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    region = Region.objects.filter(pk=request.POST.get("region")).first() or proposal.region
+    try:
+        proposal.assign_project_number(region=region, user=request.user)
+        messages.success(request, f"Project number {proposal.project_number} assigned.")
+    except ValidationError as e:
+        messages.error(request, " ".join(e.messages))
+    return redirect("proposal_detail", pk=pk)
+
+
+@login_required
+@require_cap("change_phase")
+@require_POST
+def change_phase(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    try:
+        proposal.advance_phase(request.POST.get("phase", ""), user=request.user, note=request.POST.get("note", ""))
+        messages.success(request, f"Project is now in phase {proposal.phase} — {proposal.project_number}.")
+    except ValidationError as e:
+        messages.error(request, " ".join(e.messages))
+    return redirect("proposal_detail", pk=pk)
+
+
+# =============================================================================
+# Project records (execution phase: site reports, photos, monitoring, progress)
+# =============================================================================
+@login_required
+def proposal_records(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    ctx = _proposal_ctx(proposal, "records")
+    ctx["records"] = proposal.records.select_related("created_by")
+    ctx["form"] = ProjectRecordForm(initial={"date": __import__("django.utils.timezone", fromlist=["localdate"]).localdate()})
+    kinds = {}
+    for r in ctx["records"]:
+        kinds.setdefault(r.get_kind_display(), 0)
+        kinds[r.get_kind_display()] += 1
+    ctx["kind_counts"] = kinds
+    rates = [r for r in ctx["records"] if r.kind == "progress" and r.value is not None]
+    ctx["avg_rate"] = (sum(r.value for r in rates) / len(rates)) if rates else None
+    ctx["rate_unit"] = rates[0].unit if rates else ""
+    return render(request, "proposals/proposal_records.html", ctx)
+
+
+@login_required
+@require_cap("edit_proposals")
+@require_POST
+def record_add(request, pk):
+    proposal = get_object_or_404(Proposal, pk=pk)
+    form = ProjectRecordForm(request.POST)
+    if form.is_valid():
+        rec = form.save(commit=False)
+        rec.proposal = proposal
+        rec.created_by = request.user
+        rec.save()
+        messages.success(request, "Record added.")
+    else:
+        messages.error(request, f"Could not add record: {form.errors.as_text()}")
+    return redirect("proposal_records", pk=pk)
+
+
+@login_required
+@require_cap("edit_proposals")
+@require_POST
+def record_delete(request, pk):
+    rec = get_object_or_404(ProjectRecord, pk=pk)
+    rec.delete()
+    return redirect("proposal_records", pk=rec.proposal_id)
 
 
 @login_required
@@ -135,8 +223,16 @@ def proposal_status(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
     status = request.POST.get("status")
     if status in dict(Proposal.Status.choices):
-        proposal.status = status
-        proposal.save()
+        if status in ("won", "lost", "no_bid") and not has_cap(request.user, "approve_won"):
+            messages.error(request, "Only users with the 'approve won' capability can decide a proposal.")
+        else:
+            try:
+                proposal.status = status
+                proposal.full_clean(exclude=["number", "project_number"])
+                proposal.save()
+            except ValidationError as e:
+                messages.error(request, " ".join(e.messages))
+                proposal.refresh_from_db()
     if request.htmx:
         target = request.POST.get("render", "badge")
         if target == "row":
@@ -148,6 +244,7 @@ def proposal_status(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def proposal_delete(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -157,6 +254,7 @@ def proposal_delete(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def proposal_duplicate(request, pk):
     src = get_object_or_404(Proposal, pk=pk)
@@ -211,6 +309,7 @@ def proposal_sections(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def section_add(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -223,6 +322,7 @@ def section_add(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 def section_edit(request, pk):
     section = get_object_or_404(ProposalSection, pk=pk)
     if request.method == "POST":
@@ -242,6 +342,7 @@ def section_card(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def section_delete(request, pk):
     section = get_object_or_404(ProposalSection, pk=pk)
@@ -250,6 +351,7 @@ def section_delete(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def section_move(request, pk, direction):
     section = get_object_or_404(ProposalSection, pk=pk)
@@ -258,6 +360,7 @@ def section_move(request, pk, direction):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def apply_template(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -312,6 +415,7 @@ def fee_summary(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def item_add(request, pk):
     proposal = get_object_or_404(Proposal, pk=pk)
@@ -328,6 +432,7 @@ def item_add(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 def item_edit(request, pk):
     item = get_object_or_404(FeeItem, pk=pk)
     if request.method == "POST":
@@ -347,6 +452,7 @@ def item_card(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def item_delete(request, pk):
     item = get_object_or_404(FeeItem, pk=pk)
@@ -356,6 +462,7 @@ def item_delete(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def item_move(request, pk, direction):
     item = get_object_or_404(FeeItem, pk=pk)
@@ -364,6 +471,7 @@ def item_move(request, pk, direction):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def item_duplicate(request, pk):
     item = get_object_or_404(FeeItem, pk=pk)
@@ -380,6 +488,7 @@ def item_duplicate(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def line_add(request, pk):
     item = get_object_or_404(FeeItem, pk=pk)
@@ -394,6 +503,7 @@ def line_add(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 def line_edit(request, pk):
     line = get_object_or_404(FeeLine, pk=pk)
     if request.method == "POST":
@@ -413,6 +523,7 @@ def line_row(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def line_delete(request, pk):
     line = get_object_or_404(FeeLine, pk=pk)
@@ -446,6 +557,7 @@ def fee_suggest(request, pk):
 
 
 @login_required
+@require_cap("edit_proposals")
 @require_POST
 def item_apply_suggestion(request, pk):
     """Create a fee item from a past item: copies its labour lines scaled to the suggested hours."""
@@ -505,6 +617,7 @@ def template_list(request):
 
 
 @login_required
+@require_cap("manage_projects_library")
 def template_create(request):
     form = TemplateForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -526,6 +639,7 @@ def template_detail(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def template_delete(request, pk):
     template = get_object_or_404(ProposalTemplate, pk=pk)
@@ -535,6 +649,7 @@ def template_delete(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def template_duplicate(request, pk):
     src = get_object_or_404(ProposalTemplate, pk=pk)
@@ -547,6 +662,7 @@ def template_duplicate(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def tsection_add(request, pk):
     template = get_object_or_404(ProposalTemplate, pk=pk)
@@ -557,6 +673,7 @@ def tsection_add(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 def tsection_edit(request, pk):
     section = get_object_or_404(TemplateSection, pk=pk)
     if request.method == "POST":
@@ -576,6 +693,7 @@ def tsection_card(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def tsection_delete(request, pk):
     get_object_or_404(TemplateSection, pk=pk).delete()
@@ -583,6 +701,7 @@ def tsection_delete(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def tsection_move(request, pk, direction):
     section = get_object_or_404(TemplateSection, pk=pk)
@@ -618,6 +737,7 @@ def _role_list(request, form=None, status=200):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def service_add(request):
     form = ServiceForm(request.POST)
@@ -630,6 +750,7 @@ def service_add(request):
 
 
 @login_required
+@require_cap("manage_projects_library")
 def service_edit(request, pk):
     service = get_object_or_404(Service, pk=pk)
     if request.method == "POST":
@@ -643,6 +764,7 @@ def service_edit(request, pk):
 
 
 @login_required
+@require_cap("manage_projects_library")
 @require_POST
 def service_delete(request, pk):
     get_object_or_404(Service, pk=pk).delete()
@@ -650,6 +772,7 @@ def service_delete(request, pk):
 
 
 @login_required
+@require_cap("edit_rates")
 @require_POST
 def role_add(request):
     form = StaffRoleForm(request.POST)
@@ -662,6 +785,7 @@ def role_add(request):
 
 
 @login_required
+@require_cap("edit_rates")
 def role_edit(request, pk):
     role = get_object_or_404(StaffRole, pk=pk)
     if request.method == "POST":
@@ -675,6 +799,7 @@ def role_edit(request, pk):
 
 
 @login_required
+@require_cap("edit_rates")
 @require_POST
 def role_delete(request, pk):
     role = get_object_or_404(StaffRole, pk=pk)
@@ -691,6 +816,7 @@ def _employee_list(request, form=None, status=200):
 
 
 @login_required
+@require_cap("edit_rates")
 @require_POST
 def employee_add(request):
     form = EmployeeForm(request.POST)
@@ -701,6 +827,7 @@ def employee_add(request):
 
 
 @login_required
+@require_cap("edit_rates")
 def employee_edit(request, pk):
     emp = get_object_or_404(Employee, pk=pk)
     if request.method == "POST":
@@ -714,6 +841,7 @@ def employee_edit(request, pk):
 
 
 @login_required
+@require_cap("edit_rates")
 @require_POST
 def employee_delete(request, pk):
     emp = get_object_or_404(Employee, pk=pk)

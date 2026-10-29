@@ -1,0 +1,4 @@
+<tr id="region-{{ region.pk }}" {% if not region.is_active %}style="opacity:.5"{% endif %}>
+  <td><strong class="mono">{{ region.code }}</strong>{% if not region.is_active %} <span class="badge">inactive</span>{% endif %}</td><td>{{ region.name }}</td><td><small>{{ region.get_kind_display }}</small></td>
+  <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'region_edit' region.pk %}" hx-target="#region-{{ region.pk }}" hx-swap="outerHTML">Edit</button>
+  <button class="btn btn-xs btn-danger" hx-post="{% url 'region_delete' region.pk %}" hx-confirm="Remove {{ region.code }}? Regions in use are deactivated instead." hx-target="#regions">×</button></td></tr>

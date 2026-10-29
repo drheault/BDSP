@@ -1,5 +1,5 @@
 {% load bdsp %}<tr id="employee-{{ employee.pk }}" {% if not employee.is_active %}style="opacity:.5"{% endif %}>
   <td><strong>{{ employee.name }}</strong> <small class="muted">{{ employee.initials }}</small>{% if not employee.is_active %} <span class="badge">inactive</span>{% endif %}</td>
-  <td>{{ employee.role }}</td><td class="num">{{ employee.rate|money2:company.base_currency }}</td><td class="num">{% if employee.cost_rate %}{{ employee.cost_rate|money2:company.base_currency }}{% else %}—{% endif %}</td><td><small>{{ employee.external_id|default:"—" }}</small></td>
+  <td>{{ employee.role }}</td><td class="num">{{ employee.rate|money2:company.base_currency }}</td>{% if can.view_costs %}<td class="num">{% if employee.cost_rate %}{{ employee.cost_rate|money2:company.base_currency }}{% else %}—{% endif %}</td>{% endif %}<td><small>{{ employee.external_id|default:"—" }}</small></td>
   <td class="row-actions"><button class="btn btn-xs" hx-get="{% url 'employee_edit' employee.pk %}" hx-target="#employee-{{ employee.pk }}" hx-swap="outerHTML">Edit</button>
   <button class="btn btn-xs btn-danger" hx-post="{% url 'employee_delete' employee.pk %}" hx-confirm="Remove {{ employee.name }}? People already used in estimates are deactivated instead." hx-target="#employees">×</button></td></tr>

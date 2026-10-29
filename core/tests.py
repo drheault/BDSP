@@ -31,21 +31,42 @@ class SeedAndCoreTests(TestCase):
         CompanyProfile.get_solo()
         CompanyProfile.get_solo()
         self.assertEqual(CompanyProfile.objects.count(), 1)
-        user = get_user_model().objects.create_user("u", password="p")
+        user = get_user_model().objects.create_superuser("u", "u@x.com", "p")
         self.client.force_login(user)
         r = self.client.post(
             reverse("company_settings"),
             {"name": "Deep Rock", "tagline": "", "primary_color": "#112233", "accent_color": "#445566",
-             "proposal_prefix": "DR", "proposal_footer": "", "project_number_pattern": r"^\d{2}-\d{3}$",
-             "project_number_example": "26-001", "project_number_help": "", "require_project_number_when_won": "on"},
+             "proposal_prefix": "DR", "proposal_footer": "", "number_digits": 3, "sequence_start": 601,
+             "bd_number_format": "B-{region}{seq}", "phase_number_format": "{seq}{phase}", "require_project_number_when_won": "on",
+             "smb_path_template": "", "notes_server": "", "notes_database": ""},
         )
         self.assertEqual(r.status_code, 302)
         self.assertEqual(CompanyProfile.get_solo().name, "Deep Rock")
         self.assertContains(self.client.get(reverse("dashboard")), "Deep Rock")
 
 
+    def test_roles_users_and_capabilities(self):
+        from core.models import AccessRole, user_capabilities
+
+        admin = get_user_model().objects.create_superuser("adm", "a@x.com", "p")
+        self.client.force_login(admin)
+        r = self.client.post(reverse("role_create"), {"name": "Estimators", "rank": 35, "description": "", "capabilities": ["view_proposals", "edit_proposals"]})
+        self.assertEqual(r.status_code, 302)
+        role = AccessRole.objects.get(name="Estimators")
+        r = self.client.post(reverse("user_create"), {"username": "sam", "first_name": "Sam", "last_name": "Q", "email": "", "password": "secret123", "is_active": "on", "roles": [role.pk]})
+        self.assertEqual(r.status_code, 302)
+        sam = get_user_model().objects.get(username="sam")
+        self.assertTrue(sam.check_password("secret123"))
+        self.assertEqual(user_capabilities(sam), {"view_proposals", "edit_proposals"})
+        self.assertEqual(self.client.get(reverse("roles")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("users")).status_code, 200)
+        self.client.force_login(sam)
+        self.assertEqual(self.client.get(reverse("roles")).status_code, 403)
+        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 200)
+        self.assertNotContains(self.client.get(reverse("dashboard")), "Company settings")
+
     def test_currency_management(self):
-        user = get_user_model().objects.create_user("u2", password="p")
+        user = get_user_model().objects.create_superuser("u2", "u2@x.com", "p")
         self.client.force_login(user)
         r = self.client.post(reverse("currency_add"), {"code": "eur", "name": "Euro", "symbol": "€", "rate_to_base": "1.5", "is_active": "on"}, HTTP_HX_REQUEST="true")
         self.assertContains(r, "EUR")

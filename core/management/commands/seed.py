@@ -12,7 +12,7 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import CompanyProfile, Currency
+from core.models import AccessRole, CompanyProfile, Currency, Region
 from crm.models import Client, Contact
 from projects.models import PastProject, ProjectImage
 from proposals.models import (
@@ -37,6 +37,24 @@ CURRENCIES = [
     ("CHF", "Swiss franc", "CHF ", "1.55"),
     ("ILS", "Israeli new shekel", "₪", "0.37"),
     ("AUD", "Australian dollar", "A$", "0.90"),
+]
+
+REGIONS = [
+    ("province", [("AB", "Alberta"), ("BC", "British Columbia"), ("MB", "Manitoba"), ("NB", "New Brunswick"), ("NL", "Newfoundland and Labrador"), ("NS", "Nova Scotia"), ("NT", "Northwest Territories"), ("NU", "Nunavut"), ("ON", "Ontario"), ("PE", "Prince Edward Island"), ("QC", "Quebec"), ("SK", "Saskatchewan"), ("YT", "Yukon")]),
+    ("state", [("CA", "California"), ("CO", "Colorado"), ("FL", "Florida"), ("GA", "Georgia"), ("IL", "Illinois"), ("MA", "Massachusetts"), ("MD", "Maryland"), ("NJ", "New Jersey"), ("NY", "New York"), ("OH", "Ohio"), ("PA", "Pennsylvania"), ("TX", "Texas"), ("VA", "Virginia"), ("WA", "Washington")]),
+    ("country", [("AUT", "Austria"), ("AUS", "Australia"), ("CHE", "Switzerland"), ("DEU", "Germany"), ("GBR", "United Kingdom"), ("IND", "India"), ("ISR", "Israel"), ("NOR", "Norway"), ("SGP", "Singapore"), ("SWE", "Sweden")]),
+]
+
+ROLES_ACCESS = [
+    # name, rank, description, capabilities
+    ("Partners", 10, "Full access including costs, numbering, phases and settings.", "ALL"),
+    ("Associates", 20, "Run pursuits: proposals, fees, schedules, decide won/lost, assign numbers, see costs and actuals.",
+     ["view_proposals", "edit_proposals", "approve_won", "change_phase", "view_costs", "view_actuals", "edit_actuals", "view_metrics", "manage_projects_library"]),
+    ("Engineers", 30, "Write proposals and estimates; no costs, no decisions.", ["view_proposals", "edit_proposals", "view_actuals", "manage_projects_library"]),
+    ("HR-Global", 40, "People, rates and users across offices.", ["view_proposals", "view_costs", "edit_rates", "manage_users", "view_actuals", "edit_actuals"]),
+    ("HR-Local", 45, "People and timesheets for the local office.", ["view_proposals", "edit_rates", "view_actuals", "edit_actuals"]),
+    ("IT", 60, "Settings, integrations and user accounts.", ["view_proposals", "manage_settings", "manage_integrations", "manage_users"]),
+    ("Admins", 90, "Office administration: settings, users, templates.", ["view_proposals", "manage_settings", "manage_users", "manage_projects_library"]),
 ]
 
 EMPLOYEES = [
@@ -200,6 +218,15 @@ class Command(BaseCommand):
             company.save()
         self.stdout.write(f"Currencies: {Currency.objects.count()} (default {company.default_currency})")
 
+        for kind, rows in REGIONS:
+            for code, name in rows:
+                Region.objects.get_or_create(code=code, defaults={"name": name, "kind": kind})
+        from core.models import CAPABILITY_KEYS
+
+        for name, rank, desc, caps in ROLES_ACCESS:
+            AccessRole.objects.get_or_create(name=name, defaults={"rank": rank, "description": desc, "capabilities": CAPABILITY_KEYS if caps == "ALL" else caps, "is_system": True})
+        self.stdout.write(f"Regions: {Region.objects.count()}, access roles: {AccessRole.objects.count()}")
+
         for i, (cat, name) in enumerate(SERVICES):
             Service.objects.get_or_create(name=name, defaults={"category": cat, "sort_order": i})
         for i, (title, rate) in enumerate(ROLES):
@@ -232,10 +259,18 @@ class Command(BaseCommand):
         lead1, _ = User.objects.get_or_create(username="mrivera", defaults={"first_name": "Maria", "last_name": "Rivera", "email": "mrivera@example.com"})
         lead2, _ = User.objects.get_or_create(username="jchen", defaults={"first_name": "James", "last_name": "Chen", "email": "jchen@example.com"})
         for u in (lead1, lead2):
-            if not u.has_usable_password():
+            if not u.password:
                 u.set_password("password")
                 u.is_staff = True
                 u.save()
+        AccessRole.objects.get(name="Partners").users.add(lead1)
+        AccessRole.objects.get(name="Associates").users.add(lead2)
+        eng, _ = User.objects.get_or_create(username="dokafor", defaults={"first_name": "Daniel", "last_name": "Okafor", "email": "dokafor@example.com"})
+        if not eng.password:
+            eng.set_password("password")
+            eng.save()
+        AccessRole.objects.get(name="Engineers").users.add(eng)
+        on, bc, ny = Region.objects.get(code="ON"), Region.objects.get(code="BC"), Region.objects.get(code="NY")
 
         transit, _ = Client.objects.get_or_create(name="Metro Transit Authority", defaults={"sector": "public", "website": "https://example.org"})
         water, _ = Client.objects.get_or_create(name="Regional Water District", defaults={"sector": "utility"})
@@ -265,7 +300,7 @@ class Command(BaseCommand):
         p1 = Proposal.objects.create(
             title="Eastside Extension – Twin-Bore Running Tunnels Final Design", client=transit, contact=c1,
             service_type="design", owner=lead1, status="drafting", due_date=today + timedelta(days=18),
-            probability=60, location="Downtown to Eastside, 4.2 km", currency=cad, contingency_percent=5,
+            probability=60, location="Downtown to Eastside, 4.2 km", currency=cad, contingency_percent=5, region=on,
             summary="Final design of 4.2 km twin-bore EPB TBM tunnels (6.5 m ID) with six cross-passages and two ventilation shafts in mixed-face glacial soils beneath an urban corridor.",
         )
         p1.apply_template(design_t)
@@ -284,7 +319,7 @@ class Command(BaseCommand):
         p2 = Proposal.objects.create(
             title="Northern Interceptor Tunnel – Engineering Services During Construction", client=water, contact=c2,
             service_type="construction", owner=lead2, status="submitted", due_date=today - timedelta(days=12),
-            probability=70, location="North Basin", currency=cad,
+            probability=70, location="North Basin", currency=cad, region=bc,
             summary="Construction-phase engineering support for a 3.1 km, 3.6 m ID segmentally lined sewer tunnel driven by slurry TBM, including three drop shafts.",
         )
         p2.apply_template(cs_t)
@@ -302,14 +337,14 @@ class Command(BaseCommand):
         p3 = Proposal.objects.create(
             title="Harbour Crossing – Immersed vs. Bored Tunnel Options Study", client=transit, contact=c1,
             service_type="other", owner=lead1, status="lead", due_date=today + timedelta(days=40), probability=35,
-            location="Harbour crossing, 1.8 km", manual_value=185000, currency=cad,
+            location="Harbour crossing, 1.8 km", manual_value=185000, currency=cad, region=on,
             summary="Comparative study of immersed-tube and bored tunnel options for the harbour crossing, covering constructability, cost, schedule and risk.",
         )
         p3.apply_template(ProposalTemplate.objects.get(name=STUDY_TEMPLATE[0]))
 
         p4 = Proposal.objects.create(
             title="Central Station Cavern – Design-Build Design Services", client=jv, contact=c3,
-            service_type="both", owner=lead2, status="won", due_date=today - timedelta(days=90), project_number="25-118",
+            service_type="both", owner=lead2, status="won", due_date=today - timedelta(days=90), region=ny, sequence=603, phase="D",
             probability=100, location="Central Business District", currency=usd, contingency_percent=7.5,
             summary="Design of a 24 m span, 230 m long SEM mined station cavern with twin entrance shafts, for a design-build joint venture.",
         )
@@ -344,13 +379,29 @@ class Command(BaseCommand):
 
         Proposal.objects.create(
             title="Westfield Stormwater Tunnel Preliminary Design", client=water, contact=c2, service_type="design",
-            owner=lead1, status="lost", due_date=today - timedelta(days=150), probability=0, manual_value=640000, currency=cad,
+            owner=lead1, status="lost", due_date=today - timedelta(days=150), probability=0, manual_value=640000, currency=cad, region=bc, sequence=601,
             summary="Preliminary design of a 2.4 km stormwater storage tunnel.", notes="Lost on price; incumbent retained.",
         )
         Proposal.objects.create(
             title="Airport People-Mover Cut-and-Cover Peer Review", client=transit, service_type="other",
-            owner=lead2, status="won", due_date=today - timedelta(days=200), probability=100, manual_value=95000, currency=cad, project_number="25-071", project_status="complete",
+            owner=lead2, status="won", due_date=today - timedelta(days=200), probability=100, manual_value=95000, currency=cad, region=on, sequence=602, phase="E", project_status="complete",
         )
+        # assign B numbers to the live pursuits and log history
+        for p in (p1, p2):
+            p.assign_project_number(user=lead1)
+        from proposals.models import PhaseChange, ProjectRecord
+
+        for ph, note in (("B", "Number assigned"), ("C", "Contract signed"), ("D", "Design development started")):
+            PhaseChange.objects.create(proposal=p4, phase=ph, note=note, by=lead2)
+        exec_p = Proposal.objects.get(sequence=602)
+        for i, (kind, title, val, unit) in enumerate([
+            ("site_visit", "Site visit report #12 — cut-and-cover box, east wall", None, ""),
+            ("photos", "Photo dump — strut installation level 2", None, ""),
+            ("monitoring", "Inclinometer I-04 weekly readings", 6.2, "mm"),
+            ("progress", "Excavation advance, week 31", 2.8, "m/day"),
+            ("progress", "Excavation advance, week 32", 3.1, "m/day"),
+        ]):
+            ProjectRecord.objects.create(proposal=exec_p, kind=kind, date=today - timedelta(days=30 - i * 6), title=title, value=val, unit=unit, path=f"{exec_p.smb_path}\\{kind}\\", created_by=lead2)
 
         projects = [
             ("Riverside Transit Tunnels", transit, "tunnel", "Lead designer", 2022, 410_000_000, "Twin 6.0 m ID EPB TBM tunnels, 3.8 km, 28 m deep", (15, 61, 94)),

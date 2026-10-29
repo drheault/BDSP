@@ -8,7 +8,7 @@ from proposals.models import Proposal
 
 class CrmTests(TestCase):
     def setUp(self):
-        self.client.force_login(get_user_model().objects.create_user("u", password="p"))
+        self.client.force_login(get_user_model().objects.create_superuser("u", "u@x.com", "p"))
 
     def test_client_crud_and_contacts(self):
         r = self.client.post(reverse("client_create"), {"name": "Metro", "sector": "public"})

@@ -16,6 +16,8 @@
     {% include "includes/field.html" with field=form.owner %}
     {% include "includes/field.html" with field=form.due_date %}
     {% include "includes/field.html" with field=form.currency %}
+    {% include "includes/field.html" with field=form.region %}
+    {% if can.approve_won %}{% include "includes/field.html" with field=form.assign_number %}{% endif %}
     {% include "includes/field.html" with field=form.location extra_class="full" %}
     {% include "includes/field.html" with field=form.summary extra_class="full" %}
   </div>

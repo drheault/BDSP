@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
-from core.models import Currency
+from core.models import Currency, Region
 from crm.models import Contact
 
 from .models import (
@@ -19,7 +19,7 @@ class ProposalForm(forms.ModelForm):
     class Meta:
         model = Proposal
         fields = [
-            "title", "project_number", "client", "contact", "service_type", "owner", "status", "project_status", "due_date",
+            "title", "region", "client", "contact", "service_type", "owner", "status", "project_status", "due_date",
             "probability", "currency", "location", "summary", "services", "notes",
             "manual_value", "submitted_at", "decided_at",
         ]
@@ -40,12 +40,9 @@ class ProposalForm(forms.ModelForm):
         if "currency" in self.fields:
             self.fields["currency"].queryset = Currency.objects.filter(is_active=True)
             self.fields["currency"].required = False
-        if "project_number" in self.fields:
-            from core.models import CompanyProfile
-
-            c = CompanyProfile.get_solo()
-            self.fields["project_number"].widget.attrs["placeholder"] = c.project_number_example
-            self.fields["project_number"].help_text = c.project_number_help or self.fields["project_number"].help_text
+        if "region" in self.fields:
+            self.fields["region"].queryset = Region.objects.filter(is_active=True)
+            self.fields["region"].required = False
         client_id = None
         if self.data.get("client"):
             client_id = self.data.get("client")
@@ -62,7 +59,9 @@ class ProposalCreateForm(ProposalForm):
     )
 
     class Meta(ProposalForm.Meta):
-        fields = ["title", "client", "contact", "service_type", "owner", "due_date", "currency", "location", "summary", "template"]
+        fields = ["title", "region", "client", "contact", "service_type", "owner", "due_date", "currency", "location", "summary", "template"]
+
+    assign_number = forms.BooleanField(required=False, initial=True, label="Assign the next project number now (needs a region)")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -174,3 +173,10 @@ class EmployeeForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["role"].queryset = StaffRole.objects.filter(is_active=True)
         self.fields["initials"].required = False
+
+
+class ProjectRecordForm(forms.ModelForm):
+    class Meta:
+        model = __import__("proposals.models", fromlist=["ProjectRecord"]).ProjectRecord
+        fields = ["kind", "date", "title", "value", "unit", "path", "notes"]
+        widgets = {"date": DateInput()}

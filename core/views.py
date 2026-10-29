@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,8 +12,11 @@ from django.views.decorators.http import require_POST
 from proposals.models import Proposal
 from scheduling.models import Task
 
-from .forms import CompanyProfileForm, CurrencyForm
-from .models import CompanyProfile, Currency
+from .forms import AccessRoleForm, CompanyProfileForm, CurrencyForm, RegionForm, UserForm
+from .models import CAPABILITIES, AccessRole, CompanyProfile, Currency, Region
+from .permissions import require_cap
+
+User = get_user_model()
 
 ZERO = Decimal(0)
 
@@ -57,6 +61,7 @@ def dashboard(request):
 
 
 @login_required
+@require_cap("manage_settings")
 def company_settings(request):
     profile = CompanyProfile.get_solo()
     if request.method == "POST":
@@ -70,7 +75,7 @@ def company_settings(request):
             return redirect("company_settings")
     else:
         form = CompanyProfileForm(instance=profile)
-    return render(request, "core/settings.html", {"form": form, "profile": profile, "currencies": Currency.objects.all(), "currency_form": CurrencyForm()})
+    return render(request, "core/settings.html", {"form": form, "profile": profile, "currencies": Currency.objects.all(), "currency_form": CurrencyForm(), "regions": Region.objects.all(), "region_form": RegionForm()})
 
 
 # ---- currencies (htmx) ---------------------------------------------------------
@@ -79,6 +84,7 @@ def _currency_list(request, form=None, status=200):
 
 
 @login_required
+@require_cap("manage_settings")
 @require_POST
 def currency_add(request):
     form = CurrencyForm(request.POST)
@@ -91,6 +97,7 @@ def currency_add(request):
 
 
 @login_required
+@require_cap("manage_settings")
 def currency_edit(request, pk):
     cur = get_object_or_404(Currency, pk=pk)
     if request.method == "POST":
@@ -104,6 +111,7 @@ def currency_edit(request, pk):
 
 
 @login_required
+@require_cap("manage_settings")
 @require_POST
 def currency_delete(request, pk):
     cur = get_object_or_404(Currency, pk=pk)
@@ -117,6 +125,7 @@ def currency_delete(request, pk):
 
 
 @login_required
+@require_cap("manage_settings")
 @require_POST
 def currency_make_default(request, pk):
     cur = get_object_or_404(Currency, pk=pk)
@@ -126,7 +135,101 @@ def currency_make_default(request, pk):
     return _currency_list(request)
 
 
+# ---- regions (htmx) ----------------------------------------------------------
+def _region_list(request, form=None, status=200):
+    return render(request, "core/_region_list.html", {"regions": Region.objects.all(), "region_form": form or RegionForm()}, status=status)
+
+
 @login_required
+@require_cap("manage_settings")
+@require_POST
+def region_add(request):
+    form = RegionForm(request.POST)
+    if form.is_valid():
+        form.save()
+        return _region_list(request)
+    return _region_list(request, form, 422)
+
+
+@login_required
+@require_cap("manage_settings")
+def region_edit(request, pk):
+    region = get_object_or_404(Region, pk=pk)
+    if request.method == "POST":
+        form = RegionForm(request.POST, instance=region)
+        if form.is_valid():
+            form.save()
+            return _region_list(request)
+    else:
+        form = RegionForm(instance=region)
+    return render(request, "core/_region_edit.html", {"region": region, "form": form})
+
+
+@login_required
+@require_cap("manage_settings")
+@require_POST
+def region_delete(request, pk):
+    region = get_object_or_404(Region, pk=pk)
+    if region.proposals.exists():
+        region.is_active = False
+        region.save()
+    else:
+        region.delete()
+    return _region_list(request)
+
+
+# ---- access roles & users ------------------------------------------------------
+@login_required
+@require_cap("manage_users")
+def roles(request):
+    return render(request, "core/roles.html", {"roles": AccessRole.objects.prefetch_related("users"), "capabilities": CAPABILITIES})
+
+
+@login_required
+@require_cap("manage_users")
+def role_form(request, pk=None):
+    role = get_object_or_404(AccessRole, pk=pk) if pk else None
+    form = AccessRoleForm(request.POST or None, instance=role)
+    if request.method == "POST" and form.is_valid():
+        r = form.save()
+        messages.success(request, f"Role “{r}” saved.")
+        return redirect("roles")
+    return render(request, "core/role_form.html", {"form": form, "role": role})
+
+
+@login_required
+@require_cap("manage_users")
+@require_POST
+def role_delete(request, pk):
+    role = get_object_or_404(AccessRole, pk=pk)
+    if role.is_system:
+        messages.error(request, "Seeded roles can be edited but not deleted.")
+    else:
+        role.delete()
+        messages.success(request, "Role deleted.")
+    return redirect("roles")
+
+
+@login_required
+@require_cap("manage_users")
+def users(request):
+    return render(request, "core/users.html", {"users": User.objects.prefetch_related("access_roles").order_by("-is_active", "first_name", "username")})
+
+
+@login_required
+@require_cap("manage_users")
+def user_form(request, pk=None):
+    user = get_object_or_404(User, pk=pk) if pk else None
+    form = UserForm(request.POST or None, instance=user)
+    if request.method == "POST" and form.is_valid():
+        u = form.save()
+        messages.success(request, f"User “{u.username}” saved.")
+        return redirect("users")
+    return render(request, "core/user_form.html", {"form": form, "obj": user})
+
+
+@login_required
+@require_cap("view_metrics")
 def metrics(request):
     """BD analytics: win rate by sector/service/owner, and estimate accuracy on won work."""
     base = CompanyProfile.get_solo().base_currency

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import CompanyProfile, Currency
+from core.models import AccessRole, CAPABILITY_KEYS, CompanyProfile, Currency, Region
 from crm.models import Client, Contact
 from proposals.models import Employee, FeeItem, FeeLine, Proposal, ProposalTemplate, StaffRole, TemplateSection
 from proposals.suggestions import suggest_for_item
@@ -16,7 +16,14 @@ def _currencies():
     c = CompanyProfile.get_solo()
     c.default_currency = cad
     c.save()
+    Region.objects.get_or_create(code="ON", defaults={"name": "Ontario"})
     return cad, usd
+
+
+def _superuser_like(user):
+    role, _ = AccessRole.objects.get_or_create(name="Partners", defaults={"capabilities": CAPABILITY_KEYS, "rank": 10})
+    role.users.add(user)
+    return user
 
 
 class ProposalModelTests(TestCase):
@@ -63,19 +70,34 @@ class ProposalModelTests(TestCase):
         p.apply_template(t)
         self.assertEqual(p.sections.first().rendered_body, "Dear Dana of Metro, re Tunnel {{unknown}}")
 
-    def test_project_number_validation(self):
-        p = Proposal(title="A", project_number="bad")
+    def test_project_numbering_and_phases(self):
+        on = Region.objects.get(code="ON")
+        p = Proposal.objects.create(title="A")
+        self.assertIsNone(p.project_number)
         with self.assertRaises(Exception):
-            p.full_clean()
-        p.project_number = "26-001"
-        p.full_clean()
+            Proposal(title="X", status="won").full_clean()  # needs a number before won
+        p.assign_project_number(region=on)
+        self.assertEqual(p.sequence, 601)
+        self.assertEqual(p.project_number, "B-ON601")
+        q = Proposal.objects.create(title="B", region=on)
+        q.assign_project_number()
+        self.assertEqual(q.project_number, "B-ON602")
         p.status = "won"
-        p.project_number = None
+        p.save()  # won in phase B → C automatically
+        self.assertEqual((p.phase, p.project_number), ("C", "601C"))
+        p.advance_phase("D")
+        self.assertEqual(p.project_number, "601D")
+        self.assertEqual(p.phase_changes.count(), 2)
+        self.assertIn("601D", p.smb_path)
         with self.assertRaises(Exception):
-            p.full_clean()
+            Proposal(title="dup", region=on, sequence=601, phase="D").full_clean()
+        c = CompanyProfile.get_solo()
+        c.number_digits = 4
+        c.save()
+        self.assertEqual(Proposal.objects.get(pk=q.pk).compute_project_number(), "B-ON0602")
 
     def test_suggestions_from_won_projects(self):
-        won = Proposal.objects.create(title="Old", status="won", project_number="25-001")
+        won = Proposal.objects.create(title="Old", status="won", region=Region.objects.get(code="ON"), sequence=650)
         item = FeeItem.objects.create(proposal=won, name="Segmental lining design drawings", kind="drawing")
         FeeLine.objects.create(item=item, kind="labour", employee=self.emp, hours=100)
         from timesheets.models import ActualEntry
@@ -94,7 +116,7 @@ class ProposalModelTests(TestCase):
 class ProposalViewTests(TestCase):
     def setUp(self):
         _currencies()
-        self.user = get_user_model().objects.create_user("u", password="p")
+        self.user = _superuser_like(get_user_model().objects.create_user("u", password="p"))
         self.client.force_login(self.user)
         self.cl = Client.objects.create(name="Metro")
         self.t = ProposalTemplate.objects.create(name="T", is_default=True)
@@ -103,11 +125,13 @@ class ProposalViewTests(TestCase):
         self.emp = Employee.objects.create(name="Ann Lee", role=self.role, rate=120)
 
     def test_create_from_template_and_pages(self):
-        r = self.client.post(reverse("proposal_create"), {"title": "New", "client": self.cl.pk, "service_type": "design", "template": self.t.pk})
+        on = Region.objects.get(code="ON")
+        r = self.client.post(reverse("proposal_create"), {"title": "New", "client": self.cl.pk, "service_type": "design", "template": self.t.pk, "region": on.pk, "assign_number": "on"})
         self.assertEqual(r.status_code, 302)
         p = Proposal.objects.get(title="New")
         self.assertEqual(p.sections.count(), 1)
-        for name in ("proposal_detail", "proposal_sections", "proposal_fee", "proposal_schedule", "proposal_preview", "proposal_actuals"):
+        self.assertEqual(p.project_number, "B-ON601")
+        for name in ("proposal_detail", "proposal_sections", "proposal_fee", "proposal_schedule", "proposal_preview", "proposal_actuals", "proposal_records"):
             self.assertEqual(self.client.get(reverse(name, args=[p.pk])).status_code, 200, name)
         self.assertContains(self.client.get(reverse("proposal_preview", args=[p.pk])), "Hi Metro")
 
@@ -150,15 +174,36 @@ class ProposalViewTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.content.startswith(b"%PDF"))
 
-    def test_status_change_requires_project_number_for_won(self):
+    def test_won_requires_number_and_capability(self):
         p = Proposal.objects.create(title="P")
-        r = self.client.post(reverse("proposal_detail", args=[p.pk]), {"title": "P", "service_type": "design", "status": "won", "probability": 50, "project_number": "nope", "contingency_percent": 0})
+        r = self.client.post(reverse("proposal_detail", args=[p.pk]), {"title": "P", "service_type": "design", "status": "won", "probability": 50, "contingency_percent": 0})
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "must match the company format")
-        r = self.client.post(reverse("proposal_detail", args=[p.pk]), {"title": "P", "service_type": "design", "status": "won", "probability": 50, "project_number": "26-007", "contingency_percent": 0})
+        self.assertContains(r, "Assign a project number")
+        on = Region.objects.get(code="ON")
+        r = self.client.post(reverse("assign_number", args=[p.pk]), {"region": on.pk})
         self.assertEqual(r.status_code, 302)
         p.refresh_from_db()
-        self.assertEqual(p.project_status, "active")
+        self.assertEqual(p.project_number, "B-ON601")
+        r = self.client.post(reverse("proposal_status", args=[p.pk]), {"status": "won", "render": "header"}, HTTP_HX_REQUEST="true")
+        p.refresh_from_db()
+        self.assertEqual((p.status, p.phase, p.project_status, p.project_number), ("won", "C", "active", "601C"))
+        r = self.client.post(reverse("change_phase", args=[p.pk]), {"phase": "E"})
+        p.refresh_from_db()
+        self.assertEqual(p.project_number, "601E")
+        r = self.client.post(reverse("record_add", args=[p.pk]), {"kind": "progress", "date": "2026-05-01", "title": "Advance", "value": "3.2", "unit": "m/day"})
+        self.assertContains(self.client.get(reverse("proposal_records", args=[p.pk])), "m/day")
+        # an engineer without approve_won cannot decide or assign
+        eng = get_user_model().objects.create_user("eng", password="p")
+        role = AccessRole.objects.create(name="Engineers", capabilities=["view_proposals", "edit_proposals"])
+        role.users.add(eng)
+        self.client.force_login(eng)
+        q = Proposal.objects.create(title="Q")
+        self.assertEqual(self.client.post(reverse("assign_number", args=[q.pk]), {"region": on.pk}).status_code, 403)
+        self.client.post(reverse("proposal_status", args=[q.pk]), {"status": "won"}, HTTP_HX_REQUEST="true")
+        q.refresh_from_db()
+        self.assertEqual(q.status, "lead")
+        self.assertEqual(self.client.get(reverse("proposal_fee", args=[q.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("company_settings")).status_code, 403)
 
     def test_library_role_delete_deactivates_when_used(self):
         self.client.post(reverse("role_delete", args=[self.role.pk]), HTTP_HX_REQUEST="true")
